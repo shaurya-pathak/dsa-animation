@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dsa-anim"
+version = "0.1.0"
+description = "Declarative animation engine for LLMs — Typst for animations"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "pydantic>=2.0",
+    "pycairo>=1.25",
+    "click>=8.0",
+    "Jinja2>=3.0",
+    "pyyaml>=6.0",
+    "watchdog>=3.0",
+]
+
+[project.scripts]
+dsa-anim = "dsa_anim.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dsa_anim"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,619 @@
+"""Web preview exporter — generates a self-contained HTML file with a Canvas-based player."""
+
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+import webbrowser
+from pathlib import Path
+
+from dsa_anim.dsl.schema import DocumentSpec
+from dsa_anim.scene_graph.builder import build_scene_graph
+from dsa_anim.themes.registry import get_theme
+
+
+def export_web_preview(doc: DocumentSpec, *, serve: bool = False, port: int = 8080) -> None:
+    """Export an HTML preview and optionally serve it."""
+    theme = get_theme(doc.meta.theme)
+    graph = build_scene_graph(doc, theme)
+
+    # Serialize scene graph to JSON for the JS player
+    scenes_data = []
+    for scene in graph.scenes:
+        nodes_data = []
+        for node in scene.nodes:
+            nodes_data.append(_serialize_node(node))
+
+        timeline_data = []
+        for kf in scene.timeline:
+            timeline_data.append({
+                "target_id": kf.target_id,
+                "action": kf.action.value,
+                "start_time": kf.start_time,
+                "duration": kf.duration,
+                "easing": kf.easing,
+                "source_id": kf.source_id,
+                "to_value": kf.to_value,
+                "style": kf.style,
+                "color": kf.color,
+                "content": kf.content,
+                "direction": kf.direction,
+                "stagger": kf.stagger,
+                "phases": kf.phases,
+            })
+
+        camera_kfs = []
+        for ckf in scene.camera_keyframes:
+            camera_kfs.append({
+                "action": ckf.action,
+                "start_time": ckf.start_time,
+                "duration": ckf.duration,
+                "easing": ckf.easing,
+                "to_zoom": ckf.to_zoom,
+                "focus_id": ckf.focus_id,
+            })
+
+        scenes_data.append({
+            "id": scene.id,
+            "duration": scene.duration,
+            "nodes": nodes_data,
+            "timeline": timeline_data,
+            "camera_initial": {
+                "zoom": scene.camera_initial.zoom,
+                "center_x": scene.camera_initial.center_x,
+                "center_y": scene.camera_initial.center_y,
+            },
+            "camera_keyframes": camera_kfs,
+            "transition": {
+                "type": scene.transition.type,
+                "duration": scene.transition.duration,
+            } if scene.transition else None,
+            "narration": scene.narration,
+        })
+
+    graph_json = json.dumps({
+        "width": graph.width,
+        "height": graph.height,
+        "fps": graph.fps,
+        "theme": graph.theme_name,
+        "totalDuration": graph.total_duration,
+        "scenes": scenes_data,
+    })
+
+    # Theme data for the JS renderer
+    theme_json = json.dumps({
+        "backgroundColor": theme.background_color,
+        "textColor": theme.text_color,
+        "textLight": theme.text_light,
+        "accent": theme.accent,
+        "success": theme.success,
+        "muted": theme.muted,
+        "boxFill": theme.box_fill,
+        "boxBorder": theme.box_border,
+        "boxBorderWidth": theme.box_border_width,
+        "boxCornerRadius": theme.box_corner_radius,
+        "boxPadding": theme.box_padding,
+        "tokenFill": theme.token_fill,
+        "tokenBorder": theme.token_border,
+        "connectorColor": theme.connector_color,
+        "connectorWidth": theme.connector_width,
+        "fontSizeHeading": theme.font_size_heading,
+        "fontSizeSectionHeading": theme.font_size_section_heading,
+        "fontSizeBody": theme.font_size_body,
+        "fontSizeCaption": theme.font_size_caption,
+    })
+
+    html = _generate_html(graph_json, theme_json)
+
+    if serve:
+        _serve_with_reload(html, port)
+    else:
+        # Write to temp file and open in browser
+        tmpdir = tempfile.mkdtemp(prefix="dsa-anim-")
+        path = os.path.join(tmpdir, "preview.html")
+        with open(path, "w") as f:
+            f.write(html)
+        print(f"Preview saved to {path}")
+        webbrowser.open(f"file://{path}")
+
+
+def _serialize_node(node) -> dict:
+    """Serialize a SceneNode to JSON-compatible dict."""
+    data = {
+        "id": node.id,
+        "type": node.obj_type.value,
+        "rect": {"x": node.rect.x, "y": node.rect.y, "w": node.rect.width, "h": node.rect.height},
+        "content": node.content,
+        "style": node.style,
+        "stylePops": node.style_props,
+        "label": node.label,
+        "tokenId": node.token_id,
+        "fromId": node.from_id,
+        "toId": node.to_id,
+        "tokens": node.tokens,
+        "highlightPairs": node.highlight_pairs,
+        "probItems": node.prob_items,
+        "matrixRows": node.matrix_rows,
+        "matrixCols": node.matrix_cols,
+        "matrixLabels": node.matrix_labels,
+        "children": [_serialize_node(c) for c in node.children],
+    }
+    return data
+
+
+def _generate_html(graph_json: str, theme_json: str) -> str:
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>dsa-anim Preview</title>
+<style>
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  body {{ background: #1a1a2e; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }}
+  #container {{ position: relative; }}
+  canvas {{ border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,0.3); }}
+  #controls {{ display: flex; align-items: center; gap: 12px; margin-top: 16px; color: #eee; }}
+  button {{ background: #0984E3; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; }}
+  button:hover {{ background: #0770c2; }}
+  #timeline {{ width: 400px; accent-color: #0984E3; }}
+  #time {{ font-variant-numeric: tabular-nums; min-width: 100px; text-align: center; }}
+  #narration {{ color: #ccc; margin-top: 8px; font-style: italic; max-width: 600px; text-align: center; }}
+</style>
+</head>
+<body>
+<div id="container">
+  <canvas id="canvas"></canvas>
+</div>
+<div id="controls">
+  <button id="playBtn">Play</button>
+  <input type="range" id="timeline" min="0" max="1000" value="0">
+  <span id="time">0:00 / 0:00</span>
+</div>
+<div id="narration"></div>
+<script>
+const GRAPH = {graph_json};
+const THEME = {theme_json};
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = GRAPH.width;
+canvas.height = GRAPH.height;
+// Scale canvas for display
+const maxW = Math.min(window.innerWidth - 40, 1200);
+const scale = maxW / GRAPH.width;
+canvas.style.width = (GRAPH.width * scale) + 'px';
+canvas.style.height = (GRAPH.height * scale) + 'px';
+
+let playing = false;
+let currentTime = 0;
+let lastTimestamp = null;
+
+const playBtn = document.getElementById('playBtn');
+const timelineSlider = document.getElementById('timeline');
+const timeDisplay = document.getElementById('time');
+const narrationDiv = document.getElementById('narration');
+
+playBtn.addEventListener('click', () => {{
+  playing = !playing;
+  playBtn.textContent = playing ? 'Pause' : 'Play';
+  if (playing) lastTimestamp = performance.now();
+}});
+
+timelineSlider.addEventListener('input', () => {{
+  currentTime = (timelineSlider.value / 1000) * GRAPH.totalDuration;
+  render(currentTime);
+}});
+
+function formatTime(s) {{
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + String(sec).padStart(2, '0');
+}}
+
+// Easing functions
+const easings = {{
+  'linear': t => t,
+  'ease-in': t => t * t,
+  'ease-out': t => 1 - (1 - t) * (1 - t),
+  'ease-in-out': t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+  'spring': t => {{ const c4 = (2 * Math.PI) / 3; return t <= 0 ? 0 : t >= 1 ? 1 : -(Math.pow(2, 10 * t - 10)) * Math.sin((t * 10 - 10.75) * c4) + 1; }},
+  'bounce': t => {{ const n1 = 7.5625, d1 = 2.75; if (t < 1/d1) return n1*t*t; if (t < 2/d1) {{ t -= 1.5/d1; return n1*t*t+0.75; }} if (t < 2.5/d1) {{ t -= 2.25/d1; return n1*t*t+0.9375; }} t -= 2.625/d1; return n1*t*t+0.984375; }},
+}};
+
+function getEasing(name) {{ return easings[name] || easings['ease-in-out']; }}
+
+function getSceneAtTime(t) {{
+  let elapsed = 0;
+  for (const scene of GRAPH.scenes) {{
+    if (t < elapsed + scene.duration) return {{ scene, localTime: t - elapsed }};
+    elapsed += scene.duration;
+  }}
+  return {{ scene: null, localTime: 0 }};
+}}
+
+function getProgress(kf, t) {{
+  if (t < kf.start_time) return null;
+  if (kf.duration <= 0) return t >= kf.start_time ? 1 : null;
+  const raw = (t - kf.start_time) / kf.duration;
+  if (raw > 1) return null;
+  return getEasing(kf.easing)(Math.max(0, Math.min(1, raw)));
+}}
+
+function applyAnimations(nodeMap, keyframes, t) {{
+  for (const id in nodeMap) {{
+    nodeMap[id]._visible = false;
+    nodeMap[id]._opacity = 0;
+    nodeMap[id]._drawProgress = 0;
+    nodeMap[id]._scaleX = 1;
+    nodeMap[id]._scaleY = 1;
+    nodeMap[id]._highlightIntensity = 0;
+  }}
+  for (const kf of keyframes) {{
+    const node = nodeMap[kf.target_id];
+    if (!node) continue;
+    const p = getProgress(kf, t);
+    const done = t >= kf.start_time + kf.duration;
+
+    switch(kf.action) {{
+      case 'appear':
+        if (t >= kf.start_time) {{ node._visible = true; node._opacity = 1; node._drawProgress = 1; }}
+        break;
+      case 'fade-in':
+        if (p !== null) {{ node._visible = true; node._opacity = Math.max(node._opacity, p); node._drawProgress = 1; }}
+        else if (done) {{ node._visible = true; node._opacity = 1; node._drawProgress = 1; }}
+        break;
+      case 'type': case 'draw':
+        if (p !== null) {{ node._visible = true; node._opacity = 1; node._drawProgress = p; }}
+        else if (done) {{ node._visible = true; node._opacity = 1; node._drawProgress = 1; }}
+        break;
+      case 'scale':
+        const to = kf.to_value || 1;
+        if (p !== null) {{ node._visible = true; node._opacity = 1; node._drawProgress = 1; const s = 1 + (to - 1) * p; node._scaleX = s; node._scaleY = s; }}
+        else if (done) {{ node._visible = true; node._opacity = 1; node._drawProgress = 1; node._scaleX = to; node._scaleY = to; }}
+        break;
+      case 'highlight': case 'glow': case 'pulse':
+        if (p !== null) {{ node._visible = true; node._opacity = 1; node._drawProgress = 1; node._highlightIntensity = p; }}
+        else if (done) {{ node._visible = true; node._opacity = 1; node._drawProgress = 1; }}
+        break;
+      case 'build':
+        if (kf.phases) {{
+          for (const phase of kf.phases) {{
+            const ps = parseFloat(phase.at);
+            const pd = parseFloat(phase.duration);
+            if (t >= ps) {{ node._visible = true; node._opacity = 1; node._drawProgress = pd > 0 ? Math.min(1, (t - ps) / pd) : 1; }}
+          }}
+        }}
+        break;
+      default:
+        if (p !== null) {{ node._visible = true; node._opacity = p; node._drawProgress = p; }}
+        else if (done) {{ node._visible = true; node._opacity = 1; node._drawProgress = 1; }}
+    }}
+  }}
+}}
+
+function hexToRgba(hex, alpha) {{
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${{r}},${{g}},${{b}},${{alpha !== undefined ? alpha : 1}})`;
+}}
+
+function roundedRect(ctx, x, y, w, h, r) {{
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}}
+
+function drawNode(ctx, node, nodeMap) {{
+  if (!node._visible) return;
+  ctx.save();
+  ctx.globalAlpha = node._opacity;
+
+  const r = node.rect;
+  if (node._scaleX !== 1 || node._scaleY !== 1) {{
+    const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(node._scaleX, node._scaleY);
+    ctx.translate(-cx, -cy);
+  }}
+
+  switch(node.type) {{
+    case 'text': drawText(ctx, node); break;
+    case 'box': drawBox(ctx, node); break;
+    case 'token': drawToken(ctx, node); break;
+    case 'connector': drawConnector(ctx, node, nodeMap); break;
+    case 'group': drawGroup(ctx, node, nodeMap); break;
+    case 'matrix': drawMatrix(ctx, node); break;
+    case 'attention-map': drawAttentionMap(ctx, node); break;
+    case 'probability-bar': drawProbBar(ctx, node); break;
+    default: drawBox(ctx, node); break;
+  }}
+
+  ctx.restore();
+}}
+
+function drawText(ctx, node) {{
+  if (!node.content) return;
+  const sp = node.stylePops || {{}};
+  const fontSize = sp.font_size || THEME.fontSizeBody;
+  const color = sp.color || THEME.textColor;
+  const weight = sp.font_weight === 'bold' ? 'bold' : 'normal';
+  ctx.font = `${{weight}} ${{fontSize}}px sans-serif`;
+  ctx.fillStyle = hexToRgba(color, node._opacity);
+  let text = node.content;
+  if (node._drawProgress < 1) text = text.substring(0, Math.floor(text.length * node._drawProgress));
+  const m = ctx.measureText(text);
+  ctx.fillText(text, node.rect.x + (node.rect.w - m.width) / 2, node.rect.y + node.rect.h / 2 + fontSize * 0.35);
+}}
+
+function drawBox(ctx, node) {{
+  const r = node.rect;
+  roundedRect(ctx, r.x, r.y, r.w, r.h, THEME.boxCornerRadius);
+  ctx.fillStyle = hexToRgba(THEME.boxFill, node._opacity);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(THEME.boxBorder, node._opacity);
+  ctx.lineWidth = THEME.boxBorderWidth;
+  ctx.stroke();
+  if (node.content) {{
+    ctx.font = `${{THEME.fontSizeBody}}px sans-serif`;
+    ctx.fillStyle = hexToRgba(THEME.textColor, node._opacity);
+    let text = node.content;
+    if (node._drawProgress < 1) text = text.substring(0, Math.floor(text.length * node._drawProgress));
+    const m = ctx.measureText(text);
+    ctx.fillText(text, r.x + (r.w - m.width) / 2, r.y + r.h / 2 + THEME.fontSizeBody * 0.35);
+  }}
+}}
+
+function drawToken(ctx, node) {{
+  const r = node.rect;
+  roundedRect(ctx, r.x, r.y, r.w, r.h, 4);
+  ctx.fillStyle = hexToRgba(THEME.tokenFill, node._opacity);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(THEME.tokenBorder, node._opacity);
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  if (node.content) {{
+    ctx.font = `${{THEME.fontSizeBody}}px sans-serif`;
+    ctx.fillStyle = hexToRgba(THEME.textColor, node._opacity);
+    const text = node.content.trim();
+    const m = ctx.measureText(text);
+    ctx.fillText(text, r.x + (r.w - m.width) / 2, r.y + r.h / 2 + THEME.fontSizeBody * 0.35);
+  }}
+  if (node.tokenId != null) {{
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = hexToRgba(THEME.textLight, node._opacity * 0.8);
+    const tid = String(node.tokenId);
+    const m = ctx.measureText(tid);
+    ctx.fillText(tid, r.x + (r.w - m.width) / 2, r.y + r.h + 14);
+  }}
+}}
+
+function drawConnector(ctx, node, nodeMap) {{
+  if (!node.fromId || !node.toId) return;
+  const from = nodeMap[node.fromId], to = nodeMap[node.toId];
+  if (!from || !to) return;
+  const sx = from.rect.x + from.rect.w, sy = from.rect.y + from.rect.h / 2;
+  const ex = to.rect.x, ey = to.rect.y + to.rect.h / 2;
+  ctx.strokeStyle = hexToRgba(THEME.connectorColor, node._opacity);
+  ctx.lineWidth = THEME.connectorWidth;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  const endX = sx + (ex - sx) * node._drawProgress;
+  const endY = sy + (ey - sy) * node._drawProgress;
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+}}
+
+function drawGroup(ctx, node, nodeMap) {{
+  if (node.label) {{
+    ctx.font = `bold ${{THEME.fontSizeCaption}}px sans-serif`;
+    ctx.fillStyle = hexToRgba(THEME.textLight, node._opacity);
+    const m = ctx.measureText(node.label);
+    ctx.fillText(node.label, node.rect.x + (node.rect.w - m.width) / 2, node.rect.y - 8);
+  }}
+  for (const child of (node.children || [])) {{
+    child._visible = node._visible;
+    child._opacity = node._opacity;
+    child._drawProgress = node._drawProgress;
+    drawNode(ctx, child, nodeMap);
+  }}
+}}
+
+function drawMatrix(ctx, node) {{
+  const rows = node.matrixRows || 4, cols = node.matrixCols || 4;
+  const r = node.rect;
+  const cellSize = Math.min(r.w / (cols + 2), r.h / (rows + 1), 40);
+  const labelOff = node.matrixLabels ? 80 : 0;
+  const gx = r.x + labelOff + (r.w - labelOff - cols * cellSize) / 2;
+  const gy = r.y + (r.h - rows * cellSize) / 2;
+  let rng = 42;
+  function nextRand() {{ rng = (rng * 16807 + 0) % 2147483647; return rng / 2147483647; }}
+  const cellsToShow = Math.floor(rows * cols * node._drawProgress);
+  let idx = 0;
+  for (let row = 0; row < rows; row++) {{
+    if (node.matrixLabels && node.matrixLabels.rows && row < node.matrixLabels.rows.length) {{
+      ctx.font = '14px sans-serif';
+      ctx.fillStyle = hexToRgba(THEME.textColor, node._opacity);
+      const lbl = node.matrixLabels.rows[row];
+      const m = ctx.measureText(lbl);
+      ctx.fillText(lbl, gx - m.width - 8, gy + row * cellSize + cellSize / 2 + 5);
+    }}
+    for (let col = 0; col < cols; col++) {{
+      if (idx >= cellsToShow) break;
+      const val = nextRand();
+      const x = gx + col * cellSize, y = gy + row * cellSize;
+      ctx.fillStyle = `rgba(${{Math.floor(10 + val * 77)}},${{Math.floor(133 + val * 102)}},${{227}},${{node._opacity * 0.8}})`;
+      roundedRect(ctx, x + 1, y + 1, cellSize - 2, cellSize - 2, 2);
+      ctx.fill();
+      idx++;
+    }}
+  }}
+}}
+
+function drawAttentionMap(ctx, node) {{
+  if (!node.tokens) return;
+  const r = node.rect, n = node.tokens.length;
+  const tw = Math.min(80, r.w / (n + 1));
+  const totalW = n * tw + (n - 1) * 8;
+  const sx = r.x + (r.w - totalW) / 2;
+  const ty = r.y + r.h * 0.7;
+  const positions = {{}};
+  ctx.font = '16px sans-serif';
+  for (let i = 0; i < n; i++) {{
+    const tx = sx + i * (tw + 8);
+    positions[node.tokens[i]] = {{ x: tx + tw / 2, y: ty }};
+    roundedRect(ctx, tx, ty - 15, tw, 30, 4);
+    ctx.fillStyle = hexToRgba(THEME.tokenFill, node._opacity);
+    ctx.fill();
+    ctx.strokeStyle = hexToRgba(THEME.tokenBorder, node._opacity);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = hexToRgba(THEME.textColor, node._opacity);
+    const m = ctx.measureText(node.tokens[i]);
+    ctx.fillText(node.tokens[i], tx + (tw - m.width) / 2, ty + 5);
+  }}
+  if (node.highlightPairs && node._drawProgress > 0.3) {{
+    const ap = Math.min(1, (node._drawProgress - 0.3) / 0.7);
+    const show = Math.floor(node.highlightPairs.length * ap);
+    for (let i = 0; i < show; i++) {{
+      const pair = node.highlightPairs[i];
+      const f = positions[pair.from], t = positions[pair.to];
+      if (!f || !t) continue;
+      const ah = Math.abs(t.x - f.x) * 0.4 + 30;
+      ctx.strokeStyle = hexToRgba(THEME.accent, node._opacity * pair.weight);
+      ctx.lineWidth = 2 + pair.weight * 3;
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y - 15);
+      ctx.bezierCurveTo(f.x, f.y - ah, t.x, t.y - ah, t.x, t.y - 15);
+      ctx.stroke();
+    }}
+  }}
+}}
+
+function drawProbBar(ctx, node) {{
+  if (!node.probItems) return;
+  const r = node.rect, n = node.probItems.length;
+  const bh = 28, bg = 8, lw = 80;
+  const maxBW = r.w - lw - 80;
+  const th = n * (bh + bg) - bg;
+  const ys = r.y + (r.h - th) / 2;
+  const maxV = Math.max(...node.probItems.map(i => i.value));
+  for (let i = 0; i < n; i++) {{
+    const y = ys + i * (bh + bg);
+    const item = node.probItems[i];
+    const bw = (item.value / maxV) * maxBW * node._drawProgress;
+    ctx.font = '18px sans-serif';
+    ctx.fillStyle = hexToRgba(THEME.textColor, node._opacity);
+    ctx.fillText(item.label, r.x, y + bh * 0.7);
+    const bx = r.x + lw;
+    roundedRect(ctx, bx, y, bw, bh, 4);
+    ctx.fillStyle = hexToRgba(i === 0 ? THEME.accent : THEME.muted, node._opacity * 0.8);
+    ctx.fill();
+    if (node._drawProgress > 0.5) {{
+      ctx.font = '14px sans-serif';
+      ctx.fillStyle = hexToRgba(THEME.textColor, node._opacity);
+      ctx.fillText(Math.round(item.value * 100) + '%', bx + bw + 8, y + bh * 0.7);
+    }}
+  }}
+}}
+
+function render(t) {{
+  const {{ scene, localTime }} = getSceneAtTime(t);
+  ctx.clearRect(0, 0, GRAPH.width, GRAPH.height);
+
+  // Background
+  ctx.fillStyle = THEME.backgroundColor;
+  ctx.fillRect(0, 0, GRAPH.width, GRAPH.height);
+
+  if (!scene) return;
+
+  // Build node map
+  const nodeMap = {{}};
+  function mapNodes(nodes) {{
+    for (const n of nodes) {{
+      nodeMap[n.id] = n;
+      if (n.children) mapNodes(n.children);
+    }}
+  }}
+  mapNodes(scene.nodes);
+
+  applyAnimations(nodeMap, scene.timeline, localTime);
+
+  // Camera
+  ctx.save();
+  let zoom = scene.camera_initial.zoom;
+  for (const ckf of scene.camera_keyframes) {{
+    if (localTime >= ckf.start_time) {{
+      const raw = ckf.duration > 0 ? Math.min(1, (localTime - ckf.start_time) / ckf.duration) : 1;
+      const p = getEasing(ckf.easing)(raw);
+      if (ckf.action === 'zoom' && ckf.to_zoom != null) {{
+        zoom = scene.camera_initial.zoom + (ckf.to_zoom - scene.camera_initial.zoom) * p;
+      }}
+    }}
+  }}
+  if (zoom !== 1) {{
+    const cx = GRAPH.width / 2, cy = GRAPH.height / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-cx, -cy);
+  }}
+
+  for (const node of scene.nodes) drawNode(ctx, node, nodeMap);
+  ctx.restore();
+
+  // Narration
+  narrationDiv.textContent = scene.narration || '';
+}}
+
+function tick(timestamp) {{
+  if (playing) {{
+    const dt = (timestamp - lastTimestamp) / 1000;
+    lastTimestamp = timestamp;
+    currentTime += dt;
+    if (currentTime >= GRAPH.totalDuration) {{
+      currentTime = 0;
+    }}
+    timelineSlider.value = (currentTime / GRAPH.totalDuration) * 1000;
+  }}
+  timeDisplay.textContent = formatTime(currentTime) + ' / ' + formatTime(GRAPH.totalDuration);
+  render(currentTime);
+  requestAnimationFrame(tick);
+}}
+
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>"""
+
+
+def _serve_with_reload(html: str, port: int) -> None:
+    """Serve the HTML with a simple HTTP server."""
+    import http.server
+    import threading
+    import tempfile
+    import os
+
+    tmpdir = tempfile.mkdtemp(prefix="dsa-anim-")
+    path = os.path.join(tmpdir, "index.html")
+    with open(path, "w") as f:
+        f.write(html)
+
+    os.chdir(tmpdir)
+    handler = http.server.SimpleHTTPRequestHandler
+    server = http.server.HTTPServer(("", port), handler)
+
+    print(f"Serving preview at http://localhost:{port}")
+    webbrowser.open(f"http://localhost:{port}")
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServer stopped.")
+        server.shutdown()

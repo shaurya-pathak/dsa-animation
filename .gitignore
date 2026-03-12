@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# uv
+.python-version
+
+# Rendered outputs — never commit generated video/image artifacts
+*.mp4
+*.webm
+*.png
+*.jpg
+output/
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# AI tooling (internal dev files, not part of the public project)
+AGENTS.md
+SKILL.md
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/

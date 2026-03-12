@@ -1,0 +1,31 @@
+"""Whiteboard theme — hand-drawn, sketch-style aesthetic."""
+
+from dsa_anim.themes.base import ThemeSpec
+
+WHITEBOARD = ThemeSpec(
+    name="whiteboard",
+    background_color="#FFFDF7",
+    font_family="sans-serif",
+    primary="#2D3436",
+    accent="#0984E3",
+    success="#00B894",
+    warning="#FDCB6E",
+    error="#D63031",
+    muted="#B2BEC3",
+    text_color="#2D3436",
+    text_light="#636E72",
+    box_fill="#FFFFFF",
+    box_border="#2D3436",
+    box_border_width=2.5,
+    box_corner_radius=6.0,
+    token_fill="#DFE6E9",
+    token_border="#636E72",
+    connector_color="#636E72",
+    connector_width=2.5,
+    sketch_effect=True,
+    sketch_roughness=1.5,
+    shadow=True,
+    shadow_offset=3.0,
+    shadow_blur=6.0,
+    shadow_color="#00000022",
+)

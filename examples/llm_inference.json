@@ -1,0 +1,239 @@
+{
+  "version": "1.0",
+  "meta": {
+    "title": "How an LLM Performs Inference",
+    "resolution": [1920, 1080],
+    "fps": 30,
+    "theme": "whiteboard"
+  },
+  "scenes": [
+    {
+      "id": "title_card",
+      "duration": "4s",
+      "layout": "center",
+      "objects": [
+        { "type": "text", "id": "title", "content": "How Does an LLM Think?", "style": "heading" },
+        { "type": "text", "id": "subtitle", "content": "A step-by-step look at what happens when you ask a question", "style": "caption" }
+      ],
+      "animations": [
+        { "action": "fade-in", "target": "title", "at": "0.3s", "duration": "1s" },
+        { "action": "fade-in", "target": "subtitle", "at": "1.5s", "duration": "0.8s" }
+      ],
+      "transition": { "type": "fade", "duration": "0.8s" }
+    },
+
+    {
+      "id": "user_types",
+      "duration": "7s",
+      "layout": "center",
+      "narration": "It starts with you. You type a question into the chat box — just plain English. But the model doesn't understand words the way you do. It needs to break them down first.",
+      "objects": [
+        { "type": "text", "id": "prompt_label", "content": "You type:", "style": "caption" },
+        { "type": "text", "id": "prompt_text", "content": "What is the capital of France?", "style": "heading" }
+      ],
+      "animations": [
+        { "action": "fade-in", "target": "prompt_label", "at": "0s", "duration": "0.5s" },
+        { "action": "type", "target": "prompt_text", "at": "0.5s", "duration": "2.5s", "easing": "linear" }
+      ],
+      "transition": { "type": "zoom-into", "target": "prompt_text", "duration": "1s" }
+    },
+
+    {
+      "id": "tokenization",
+      "duration": "12s",
+      "layout": { "type": "flow", "direction": "horizontal", "gap": "small", "align": "center" },
+      "narration": "The tokenizer slices your sentence into tokens — small chunks the model can process. Each token gets a unique ID from a vocabulary of tens of thousands of entries. Notice how 'capital' and 'France' are their own tokens, but common words like 'the' are too.",
+      "objects": [
+        { "type": "text", "id": "tok_heading", "content": "Step 1: Tokenization", "style": "section-heading", "position": "top" },
+        { "type": "token", "id": "t1", "content": "What", "token_id": 1327 },
+        { "type": "token", "id": "t2", "content": "is", "token_id": 318 },
+        { "type": "token", "id": "t3", "content": "the", "token_id": 262 },
+        { "type": "token", "id": "t4", "content": "capital", "token_id": 3361 },
+        { "type": "token", "id": "t5", "content": "of", "token_id": 286 },
+        { "type": "token", "id": "t6", "content": "France", "token_id": 4881 },
+        { "type": "token", "id": "t7", "content": "?", "token_id": 30 },
+        {
+          "type": "callout", "id": "token_callout",
+          "content": "Each token maps to a number. The model has never seen raw text — only these IDs.",
+          "from": "t4",
+          "position": "above-layout"
+        }
+      ],
+      "animations": [
+        { "action": "fade-in", "target": "tok_heading", "at": "0s", "duration": "0.5s" },
+        { "action": "enclose", "target": ["t1", "t2", "t3", "t4", "t5", "t6", "t7"], "stagger": "0.3s", "at": "1s", "duration": "0.6s", "easing": "ease-out" },
+        { "action": "highlight", "target": "t4", "at": "4s", "duration": "1.5s", "style": "glow", "color": "accent" },
+        { "action": "highlight", "target": "t6", "at": "5s", "duration": "1.5s", "style": "glow", "color": "accent" },
+        { "action": "fade-in", "target": "token_callout", "at": "6.5s", "duration": "0.8s" }
+      ],
+      "camera_animations": [
+        { "action": "zoom", "to": 1.2, "focus": "t4", "at": "3.5s", "duration": "1.5s" },
+        { "action": "zoom", "to": 1.0, "at": "8s", "duration": "1.5s" }
+      ],
+      "transition": { "type": "wipe", "direction": "down", "duration": "0.8s" }
+    },
+
+    {
+      "id": "embedding",
+      "duration": "11s",
+      "layout": { "type": "split", "direction": "vertical", "ratio": "1:3" },
+      "narration": "Next, each token is transformed into an embedding — a dense vector of numbers that captures meaning. 'France' and 'Paris' would have similar embeddings because they're semantically related. This is how the model represents knowledge: as geometry in high-dimensional space.",
+      "objects": [
+        { "type": "text", "id": "emb_heading", "content": "Step 2: Embedding Lookup", "style": "section-heading", "position": "top" },
+        {
+          "type": "group", "id": "tokens_row",
+          "layout": { "type": "flow", "direction": "horizontal", "gap": "small" },
+          "children": [
+            { "type": "token", "id": "et1", "content": "What" },
+            { "type": "token", "id": "et2", "content": "is" },
+            { "type": "token", "id": "et3", "content": "the" },
+            { "type": "token", "id": "et4", "content": "capital" },
+            { "type": "token", "id": "et5", "content": "of" },
+            { "type": "token", "id": "et6", "content": "France" },
+            { "type": "token", "id": "et7", "content": "?" }
+          ]
+        },
+        {
+          "type": "matrix", "id": "embed_matrix",
+          "rows": 7, "cols": 12,
+          "labels": { "rows": ["What", "is", "the", "capital", "of", "France", "?"] },
+          "style": "heatmap",
+          "data": "random"
+        },
+        {
+          "type": "callout", "id": "emb_callout",
+          "content": "Each row is a 768-dimensional vector (shown compressed). Similar meanings produce similar vectors.",
+          "position": "above-layout"
+        }
+      ],
+      "animations": [
+        { "action": "fade-in", "target": "emb_heading", "at": "0s", "duration": "0.5s" },
+        { "action": "appear", "target": "tokens_row", "at": "0.5s" },
+        { "action": "flow-into", "source": "tokens_row", "target": "embed_matrix", "at": "1.5s", "duration": "2.5s", "style": "particle-stream" },
+        { "action": "reveal-cells", "target": "embed_matrix", "direction": "top-to-bottom", "at": "1.5s", "duration": "2.5s" },
+        { "action": "fade-in", "target": "emb_callout", "at": "5s", "duration": "0.8s" }
+      ],
+      "transition": { "type": "fade", "duration": "0.6s" }
+    },
+
+    {
+      "id": "attention",
+      "duration": "14s",
+      "layout": "center",
+      "narration": "Now the magic happens. The self-attention mechanism lets every token 'look at' every other token to understand context. When the model processes 'capital', it attends strongly to 'France' — because the meaning of 'capital' depends entirely on what country we're asking about. Without attention, the model would process each word in isolation.",
+      "objects": [
+        { "type": "text", "id": "attn_heading", "content": "Step 3: Self-Attention", "style": "section-heading", "position": "top" },
+        {
+          "type": "attention-map", "id": "attn",
+          "tokens": ["What", "is", "the", "capital", "of", "France", "?"],
+          "highlight_pairs": [
+            { "from": "capital", "to": "France", "weight": 0.92 },
+            { "from": "capital", "to": "of", "weight": 0.65 },
+            { "from": "What", "to": "capital", "weight": 0.58 },
+            { "from": "France", "to": "capital", "weight": 0.71 },
+            { "from": "What", "to": "?", "weight": 0.45 },
+            { "from": "is", "to": "What", "weight": 0.40 }
+          ]
+        },
+        {
+          "type": "callout", "id": "attn_callout",
+          "content": "Thicker arcs = stronger attention. capital→France is the strongest — the model knows they're semantically bound.",
+          "from": "attn",
+          "position": "above-layout"
+        }
+      ],
+      "animations": [
+        { "action": "fade-in", "target": "attn_heading", "at": "0s", "duration": "0.5s" },
+        { "action": "build", "target": "attn",
+          "phases": [
+            { "step": "show-tokens", "at": "0.5s", "duration": "1.5s" },
+            { "step": "show-connections", "at": "3s", "duration": "3s", "stagger": "0.4s" },
+            { "step": "highlight-strong", "at": "7s", "duration": "2s" }
+          ]
+        },
+        { "action": "fade-in", "target": "attn_callout", "at": "8s", "duration": "0.8s" }
+      ],
+      "camera_animations": [
+        { "action": "zoom", "to": 1.25, "focus": "attn", "at": "6s", "duration": "2s" },
+        { "action": "zoom", "to": 1.0, "at": "10s", "duration": "1.5s" }
+      ],
+      "transition": { "type": "zoom-into", "target": "attn", "duration": "1s" }
+    },
+
+    {
+      "id": "feedforward",
+      "duration": "8s",
+      "layout": { "type": "stack", "gap": "medium", "align": "center" },
+      "narration": "After attention, the information passes through feed-forward layers — a series of transformations that refine the model's understanding. This happens 96 times in GPT-4, each layer building a deeper representation. By the final layer, the model has synthesized everything it needs to answer.",
+      "objects": [
+        { "type": "text", "id": "ff_heading", "content": "Step 4: Processing Layers", "style": "section-heading" },
+        { "type": "box", "id": "layer1", "content": "Layer 1: Basic patterns" },
+        { "type": "box", "id": "layer2", "content": "Layer 2: Grammar & syntax" },
+        { "type": "box", "id": "layer3", "content": "Layer 3: Semantic meaning" },
+        { "type": "box", "id": "layer_dots", "content": "· · ·  (96 layers total)" },
+        { "type": "box", "id": "layer_n", "content": "Layer 96: Final reasoning" },
+        { "type": "connector", "id": "c12", "from": "layer1", "to": "layer2", "style": "arrow" },
+        { "type": "connector", "id": "c23", "from": "layer2", "to": "layer3", "style": "arrow" },
+        { "type": "connector", "id": "c3d", "from": "layer3", "to": "layer_dots", "style": "arrow" },
+        { "type": "connector", "id": "cdn", "from": "layer_dots", "to": "layer_n", "style": "arrow" }
+      ],
+      "animations": [
+        { "action": "fade-in", "target": "ff_heading", "at": "0s", "duration": "0.5s" },
+        { "action": "fade-in", "target": ["layer1", "layer2", "layer3", "layer_dots", "layer_n"], "stagger": "0.5s", "at": "0.8s", "duration": "0.5s" },
+        { "action": "draw", "target": ["c12", "c23", "c3d", "cdn"], "stagger": "0.5s", "at": "1.3s", "duration": "0.4s" },
+        { "action": "highlight", "target": "layer_n", "at": "5s", "duration": "1.5s", "color": "accent" }
+      ],
+      "transition": { "type": "wipe", "direction": "down", "duration": "0.8s" }
+    },
+
+    {
+      "id": "output",
+      "duration": "12s",
+      "layout": { "type": "stack", "gap": "large", "align": "center" },
+      "narration": "At the very end, the model produces a probability distribution over its entire vocabulary — every word it knows gets a score. 'Paris' wins overwhelmingly at 92%. The model doesn't 'know' the answer the way you do — it has learned statistical patterns from billions of text examples that make 'Paris' the most likely continuation.",
+      "objects": [
+        { "type": "text", "id": "out_heading", "content": "Step 5: Next Token Prediction", "style": "section-heading" },
+        {
+          "type": "probability-bar", "id": "probs",
+          "items": [
+            { "label": "Paris", "value": 0.92 },
+            { "label": "Lyon", "value": 0.03 },
+            { "label": "Berlin", "value": 0.02 },
+            { "label": "London", "value": 0.01 },
+            { "label": "...", "value": 0.02 }
+          ],
+          "style": "horizontal-bars"
+        },
+        { "type": "text", "id": "answer", "content": "The capital of France is Paris.", "style": "result" },
+        {
+          "type": "callout", "id": "out_callout",
+          "content": "The model generates one token at a time. To produce the full sentence, this process repeats — each new token fed back in as input.",
+          "position": "above-layout"
+        }
+      ],
+      "animations": [
+        { "action": "fade-in", "target": "out_heading", "at": "0s", "duration": "0.5s" },
+        { "action": "grow-bars", "target": "probs", "at": "1s", "duration": "2.5s", "easing": "spring" },
+        { "action": "highlight", "target": "probs", "at": "4s", "duration": "1.5s", "style": "pulse-glow", "color": "success" },
+        { "action": "type", "target": "answer", "at": "6s", "duration": "2.5s", "easing": "linear" },
+        { "action": "scale", "target": "answer", "to": 1.05, "at": "9s", "duration": "0.5s", "easing": "bounce" },
+        { "action": "fade-in", "target": "out_callout", "at": "9s", "duration": "0.8s" }
+      ]
+    },
+
+    {
+      "id": "closing",
+      "duration": "5s",
+      "layout": "center",
+      "narration": "From raw text to tokenization, embedding, attention, and generation — all in milliseconds. That's how a large language model thinks.",
+      "objects": [
+        { "type": "text", "id": "closing_text", "content": "Tokenize → Embed → Attend → Generate", "style": "heading" },
+        { "type": "text", "id": "closing_sub", "content": "All in ~200 milliseconds", "style": "caption" }
+      ],
+      "animations": [
+        { "action": "fade-in", "target": "closing_text", "at": "0.5s", "duration": "1.5s" },
+        { "action": "fade-in", "target": "closing_sub", "at": "2.5s", "duration": "1s" }
+      ]
+    }
+  ]
+}
