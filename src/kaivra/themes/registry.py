@@ -9,12 +9,14 @@ from typing import Any, Iterable
 from kaivra.themes.base import ThemeSpec
 from kaivra.themes.material import MATERIAL
 from kaivra.themes.modern import MODERN
+from kaivra.themes.storyboard_dark import STORYBOARD_DARK
 from kaivra.themes.whiteboard import WHITEBOARD
 
 _THEMES: dict[str, ThemeSpec] = {
     "material": MATERIAL,
     "whiteboard": WHITEBOARD,
     "modern": MODERN,
+    "storyboard_dark": STORYBOARD_DARK,
 }
 
 

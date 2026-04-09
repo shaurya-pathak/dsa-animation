@@ -18,8 +18,22 @@ SUPPORTED_PATTERNS = (
     "algorithm_walkthrough",
     "architecture_explainer",
     "before_after_comparison",
+    "system_storyboard",
     "visual_explainer",
 )
+SUPPORTED_STORYBOARD_SCENE_KINDS = {
+    "title",
+    "state",
+    "transform",
+    "intercept",
+    "inspect",
+    "branch",
+    "regroup",
+    "structure",
+    "compare",
+    "principle",
+    "summary",
+}
 DEFAULT_THEME = "modern"
 
 
@@ -31,6 +45,7 @@ class Beat:
     slug: str
     title: str
     detail: str
+    scene_kind: str | None = None
 
     @property
     def label(self) -> str:
@@ -131,11 +146,15 @@ def _coerce_beats(raw_beats: list[Any] | None, *, title: str) -> list[Beat]:
 
 
 def _coerce_beat(item: Any, *, index: int) -> Beat:
+    scene_kind: str | None = None
     if isinstance(item, str):
         title, detail = _split_beat_text(item)
     elif isinstance(item, dict):
         raw_title = item.get("title") or item.get("name") or item.get("label")
         raw_detail = item.get("detail") or item.get("summary") or item.get("content")
+        raw_scene_kind = item.get("scene_kind") or item.get("sceneKind")
+        if raw_scene_kind is not None:
+            scene_kind = _normalize_storyboard_scene_kind(str(raw_scene_kind))
         if raw_title is None and raw_detail is None:
             raise ValueError(f"Beat {index + 1} must include title/detail content.")
         if raw_title is None:
@@ -153,7 +172,18 @@ def _coerce_beat(item: Any, *, index: int) -> Beat:
         slug=f"beat_{index + 1:02d}",
         title=title,
         detail=detail,
+        scene_kind=scene_kind,
     )
+
+
+def _normalize_storyboard_scene_kind(scene_kind: str) -> str:
+    normalized = scene_kind.strip().lower().replace("-", "_")
+    if normalized not in SUPPORTED_STORYBOARD_SCENE_KINDS:
+        supported = ", ".join(sorted(SUPPORTED_STORYBOARD_SCENE_KINDS))
+        raise ValueError(
+            f"Unsupported storyboard scene_kind {scene_kind!r}. Choose one of: {supported}."
+        )
+    return normalized
 
 
 def _split_beat_text(text: str) -> tuple[str, str]:
@@ -241,6 +271,18 @@ def _build_scenes(
     if pattern == "visual_explainer":
         return [
             _build_visual_scene(
+                animation_title=title,
+                beat=beat,
+                beats=beats,
+                audience=audience,
+                include_narration=include_narration,
+                pacing_profile=pacing_profile,
+            )
+            for beat in beats
+        ]
+    if pattern == "system_storyboard":
+        return [
+            _build_system_storyboard_scene(
                 animation_title=title,
                 beat=beat,
                 beats=beats,
@@ -533,6 +575,640 @@ def _build_visual_scene(
             extra_animations=extra_animations,
         ),
         "auto_visible": not include_narration,
+    }
+
+
+def _build_system_storyboard_scene(
+    *,
+    animation_title: str,
+    beat: Beat,
+    beats: list[Beat],
+    audience: str | None,
+    include_narration: bool,
+    pacing_profile: PacingProfile,
+) -> dict[str, Any]:
+    scene_kind = _storyboard_scene_kind(beats, beat)
+    scene_id = beat.slug
+    duration = _scene_duration(beat, pacing_profile)
+    step_target_id = _step_target_id(beats, beat)
+
+    if scene_kind in {"title", "principle", "summary"}:
+        stage_id = "storyboard_principle_panel"
+        objects = _storyboard_reset_objects(
+            animation_title=animation_title,
+            beat=beat,
+            scene_kind=scene_kind,
+        )
+        return {
+            "id": scene_id,
+            "duration": duration,
+            "template": "storyboard",
+            "narration": _scene_narration(animation_title, beat, audience, include_narration),
+            "objects": objects,
+            "animations": _step_animations(
+                beat=beat,
+                duration=duration,
+                target_id=stage_id,
+                pacing_profile=pacing_profile,
+                step_target_id=step_target_id,
+                highlight_color="accent" if scene_kind != "summary" else "success",
+                reveal_target_ids=_reveal_object_ids(objects) if include_narration else None,
+            ),
+            "auto_visible": not include_narration,
+        }
+
+    objects, connector_ids, focus_id, highlight_color = _storyboard_scene_payload(
+        animation_title=animation_title,
+        beat=beat,
+        beats=beats,
+        scene_kind=scene_kind,
+        include_narration=include_narration,
+    )
+    caption = _caption_group(
+        scene_id=scene_id, audience=audience, include_narration=include_narration
+    )
+    if caption is not None:
+        objects.append(caption)
+
+    extra_animations = _connector_draw_animations(
+        connector_ids,
+        pacing_profile=pacing_profile,
+        start=0.15,
+        gap=0.28,
+    )
+    return {
+        "id": scene_id,
+        "duration": duration,
+        "template": "storyboard",
+        "narration": _scene_narration(animation_title, beat, audience, include_narration),
+        "focus": focus_id,
+        "focus_style": {
+            "at": "0.45s",
+            "duration": pacing_profile.focus_duration,
+            "scale": 1.08,
+            "color": highlight_color,
+        },
+        "objects": objects,
+        "animations": _step_animations(
+            beat=beat,
+            duration=duration,
+            target_id=focus_id,
+            pacing_profile=pacing_profile,
+            step_target_id=step_target_id,
+            highlight_color=highlight_color,
+            reveal_target_ids=_reveal_object_ids(objects) if include_narration else None,
+            extra_animations=extra_animations,
+        ),
+        "auto_visible": not include_narration,
+    }
+
+
+def _storyboard_scene_kind(beats: list[Beat], beat: Beat) -> str:
+    if beat.scene_kind:
+        return beat.scene_kind
+    if len(beats) == 1:
+        return "summary"
+    if beat.index == 0:
+        return "title"
+    if beat.index == len(beats) - 1:
+        return "summary"
+    middle_kinds = [
+        "state",
+        "transform",
+        "intercept",
+        "inspect",
+        "branch",
+        "regroup",
+        "structure",
+        "compare",
+        "principle",
+    ]
+    return middle_kinds[min(beat.index - 1, len(middle_kinds) - 1)]
+
+
+def _storyboard_scene_payload(
+    *,
+    animation_title: str,
+    beat: Beat,
+    beats: list[Beat],
+    scene_kind: str,
+    include_narration: bool,
+) -> tuple[list[dict[str, Any]], list[str], str, str]:
+    heading = {
+        "type": "text",
+        "id": "storyboard_heading",
+        "content": _truncate(beat.title, 28),
+        "style": "heading",
+    }
+    support = _storyboard_support_group(beat)
+    aside = _storyboard_aside_group(animation_title, beat, scene_kind, include_narration)
+
+    if scene_kind == "state":
+        stage, connector_ids, focus_id = _storyboard_state_stage(beats, beat)
+        connectors = _connectors(
+            ("storyboard_prev_link", "story_previous_card", "story_current_card"),
+            ("storyboard_next_link", "story_current_card", "story_next_card"),
+        )
+        return [heading, *connectors, stage, support, aside], connector_ids, focus_id, "accent"
+    if scene_kind == "transform":
+        stage, connector_ids, focus_id = _storyboard_transform_stage(beat)
+        connectors = _connectors(
+            ("story_transform_link", "transform_field", "story_transform_target")
+        )
+        return [heading, *connectors, stage, support, aside], connector_ids, focus_id, "warning"
+    if scene_kind == "intercept":
+        stage, connector_ids, focus_id = _storyboard_intercept_stage(beat)
+        connectors = _connectors(
+            ("story_run_link", "story_run", "story_failure"),
+            ("story_manual_link", "story_failure", "story_manual"),
+            ("story_agent_link", "story_agent", "story_failure"),
+        )
+        return [heading, *connectors, stage, support, aside], connector_ids, focus_id, "success"
+    if scene_kind == "inspect":
+        stage, connector_ids, focus_id = _storyboard_inspect_stage(beat)
+        connectors = _connectors(
+            ("story_logs_link", "story_inspect_actor", "story_logs"),
+            ("story_fs_link", "story_inspect_actor", "story_fs"),
+            ("story_state_link", "story_inspect_actor", "story_state"),
+        )
+        return [heading, *connectors, stage, support, aside], connector_ids, focus_id, "accent"
+    if scene_kind == "branch":
+        stage, connector_ids, focus_id = _storyboard_branch_stage(beat)
+        connectors = _connectors(
+            ("story_branch_link_1", "story_branch_source", "story_branch_1"),
+            ("story_branch_link_2", "story_branch_source", "story_branch_2"),
+            ("story_branch_link_3", "story_branch_source", "story_branch_3"),
+            ("story_branch_link_4", "story_branch_source", "story_branch_4"),
+        )
+        return [heading, *connectors, stage, support, aside], connector_ids, focus_id, "success"
+    if scene_kind == "regroup":
+        stage, connector_ids, focus_id = _storyboard_regroup_stage(beat)
+        connectors = _connectors(("story_regroup_link", "regroup_field", "story_cluster_b"))
+        return [heading, *connectors, stage, support, aside], connector_ids, focus_id, "success"
+    if scene_kind == "structure":
+        stage, connector_ids, focus_id = _storyboard_structure_stage(beat)
+        connectors = _connectors(("story_structure_link", "story_raw_log", "story_bug_title"))
+        return [heading, *connectors, stage, support, aside], connector_ids, focus_id, "accent"
+    if scene_kind == "compare":
+        stage, connector_ids, focus_id = _storyboard_compare_stage(beat)
+        connectors = _connectors(
+            ("story_compare_link", "story_compare_before_card", "story_compare_after_card")
+        )
+        return [heading, *connectors, stage, support, aside], connector_ids, focus_id, "success"
+    stage, connector_ids, focus_id = _storyboard_state_stage(beats, beat)
+    connectors = _connectors(
+        ("storyboard_prev_link", "story_previous_card", "story_current_card"),
+        ("storyboard_next_link", "story_current_card", "story_next_card"),
+    )
+    return [heading, *connectors, stage, support, aside], connector_ids, focus_id, "accent"
+
+
+def _storyboard_reset_objects(
+    *,
+    animation_title: str,
+    beat: Beat,
+    scene_kind: str,
+) -> list[dict[str, Any]]:
+    subtitle = animation_title if scene_kind == "title" else _truncate(beat.detail, 42)
+    lines = [
+        {
+            "type": "text",
+            "id": "storyboard_reset_title",
+            "content": _truncate(beat.title if scene_kind != "title" else animation_title, 30),
+            "style": "heading",
+        }
+    ]
+    if subtitle:
+        lines.append(
+            {
+                "type": "text",
+                "id": "storyboard_reset_subtitle",
+                "content": subtitle,
+                "style": "caption",
+            }
+        )
+    lines.append(
+        {
+            "type": "token",
+            "id": "storyboard_reset_badge",
+            "grid": {"region": "rail"},
+            "content": beat.label,
+            "style": "accent" if scene_kind != "summary" else "success",
+        }
+    )
+    return [
+        {
+            "type": "group",
+            "id": "storyboard_principle_panel",
+            "grid": {"region": "stage"},
+            "layout": {"type": "stack", "gap": "medium", "align": "center"},
+            "children": lines[:-1],
+        },
+        lines[-1],
+    ]
+
+
+def _storyboard_state_stage(beats: list[Beat], beat: Beat) -> tuple[dict[str, Any], list[str], str]:
+    neighbors = [
+        ("previous", beats[max(0, beat.index - 1)], "muted"),
+        ("current", beat, "primary"),
+        ("next", beats[min(len(beats) - 1, beat.index + 1)], "accent"),
+    ]
+    children = [
+        _storyboard_actor_card(
+            slot, item, style=style, size_variant="hero" if slot == "current" else "default"
+        )
+        for slot, item, style in neighbors
+    ]
+    return (
+        {
+            "type": "group",
+            "id": "storyboard_state_stage",
+            "grid": {"region": "stage"},
+            "layout": {
+                "type": "flow",
+                "direction": "horizontal",
+                "gap": "large",
+                "align": "center",
+            },
+            "children": children,
+        },
+        ["storyboard_prev_link", "storyboard_next_link"],
+        "story_current_card",
+    )
+
+
+def _storyboard_transform_stage(beat: Beat) -> tuple[dict[str, Any], list[str], str]:
+    signals = _storyboard_dense_field_group("transform_field", active_count=30)
+    outcome = {
+        "type": "box",
+        "id": "story_transform_target",
+        "actor_id": f"story_actor_{beat.slug}",
+        "content": _truncate(beat.title, 22),
+        "style": "warning",
+        "size_variant": "hero",
+    }
+    return (
+        {
+            "type": "group",
+            "id": "storyboard_transform_stage",
+            "grid": {"region": "stage"},
+            "layout": {
+                "type": "flow",
+                "direction": "horizontal",
+                "gap": "large",
+                "align": "center",
+            },
+            "children": [signals, outcome],
+        },
+        ["story_transform_link"],
+        "story_transform_target",
+    )
+
+
+def _storyboard_intercept_stage(beat: Beat) -> tuple[dict[str, Any], list[str], str]:
+    children = [
+        {"type": "token", "id": "story_run", "content": "Runs", "style": "muted"},
+        {"type": "box", "id": "story_failure", "content": "Failure", "style": "warning"},
+        {"type": "box", "id": "story_manual", "content": "Manual", "style": "muted"},
+        {
+            "type": "circle",
+            "id": "story_agent",
+            "actor_id": f"story_actor_{beat.slug}",
+            "content": "AI",
+            "style": "success",
+            "size_variant": "hero",
+        },
+    ]
+    return (
+        {
+            "type": "group",
+            "id": "storyboard_intercept_stage",
+            "grid": {"region": "stage"},
+            "layout": {
+                "type": "flow",
+                "direction": "horizontal",
+                "gap": "large",
+                "align": "center",
+            },
+            "children": children,
+        },
+        ["story_run_link", "story_manual_link", "story_agent_link"],
+        "story_agent",
+    )
+
+
+def _storyboard_inspect_stage(beat: Beat) -> tuple[dict[str, Any], list[str], str]:
+    focus = {
+        "type": "circle",
+        "id": "story_inspect_actor",
+        "actor_id": f"story_actor_{beat.slug}",
+        "content": "AI",
+        "style": "accent",
+        "size_variant": "hero",
+    }
+    branches = [
+        {"type": "token", "id": "story_logs", "content": "Logs", "style": "muted"},
+        {"type": "token", "id": "story_fs", "content": "Filesystem", "style": "muted"},
+        {"type": "token", "id": "story_state", "content": "System State", "style": "muted"},
+    ]
+    return (
+        {
+            "type": "group",
+            "id": "storyboard_inspect_stage",
+            "grid": {"region": "stage"},
+            "layout": {"type": "stack", "gap": "large", "align": "center"},
+            "children": [
+                focus,
+                {
+                    "type": "group",
+                    "id": "story_inspect_targets",
+                    "layout": {
+                        "type": "flow",
+                        "direction": "horizontal",
+                        "gap": "large",
+                        "align": "center",
+                    },
+                    "children": branches,
+                },
+            ],
+        },
+        ["story_logs_link", "story_fs_link", "story_state_link"],
+        "story_inspect_actor",
+    )
+
+
+def _storyboard_branch_stage(beat: Beat) -> tuple[dict[str, Any], list[str], str]:
+    focus = {
+        "type": "box",
+        "id": "story_branch_source",
+        "actor_id": f"story_actor_{beat.slug}",
+        "content": _truncate(beat.title, 22),
+        "style": "primary",
+    }
+    outcomes = [
+        {"type": "token", "id": "story_branch_1", "content": "Product", "style": "error"},
+        {"type": "token", "id": "story_branch_2", "content": "Automation", "style": "success"},
+        {"type": "token", "id": "story_branch_3", "content": "Environment", "style": "warning"},
+        {"type": "token", "id": "story_branch_4", "content": "Unknown", "style": "muted"},
+    ]
+    return (
+        {
+            "type": "group",
+            "id": "storyboard_branch_stage",
+            "grid": {"region": "stage"},
+            "layout": {"type": "stack", "gap": "large", "align": "center"},
+            "children": [
+                focus,
+                {
+                    "type": "group",
+                    "id": "story_branch_targets",
+                    "layout": {
+                        "type": "flow",
+                        "direction": "horizontal",
+                        "gap": "medium",
+                        "align": "center",
+                    },
+                    "children": outcomes,
+                },
+            ],
+        },
+        [
+            "story_branch_link_1",
+            "story_branch_link_2",
+            "story_branch_link_3",
+            "story_branch_link_4",
+        ],
+        "story_branch_source",
+    )
+
+
+def _storyboard_regroup_stage(beat: Beat) -> tuple[dict[str, Any], list[str], str]:
+    field = _storyboard_dense_field_group("regroup_field", active_count=34)
+    clusters = {
+        "type": "group",
+        "id": "storyboard_clusters",
+        "layout": {"type": "stack", "gap": "medium", "align": "center"},
+        "children": [
+            {"type": "box", "id": "story_cluster_a", "content": "Cluster A", "style": "success"},
+            {"type": "box", "id": "story_cluster_b", "content": "Cluster B", "style": "success"},
+            {"type": "box", "id": "story_cluster_c", "content": "Cluster C", "style": "success"},
+        ],
+    }
+    return (
+        {
+            "type": "group",
+            "id": "storyboard_regroup_stage",
+            "grid": {"region": "stage"},
+            "layout": {
+                "type": "flow",
+                "direction": "horizontal",
+                "gap": "large",
+                "align": "center",
+            },
+            "children": [field, clusters],
+        },
+        ["story_regroup_link"],
+        "story_cluster_b",
+    )
+
+
+def _storyboard_structure_stage(beat: Beat) -> tuple[dict[str, Any], list[str], str]:
+    raw = _text_stack(
+        group_id="story_raw_log",
+        lines=["stacktrace line 1", "stacktrace line 2", "stacktrace line 3"],
+        style="caption",
+        align="left",
+    )
+    structured = {
+        "type": "group",
+        "id": "story_structured_bug",
+        "layout": {"type": "stack", "gap": "small", "align": "left"},
+        "children": [
+            {
+                "type": "box",
+                "id": "story_bug_title",
+                "content": _truncate(beat.title, 22),
+                "style": "primary",
+            },
+            {
+                "type": "token",
+                "id": "story_bug_owner",
+                "content": "Owner assigned",
+                "style": "success",
+            },
+            {
+                "type": "token",
+                "id": "story_bug_evidence",
+                "content": "Evidence attached",
+                "style": "accent",
+            },
+        ],
+    }
+    return (
+        {
+            "type": "group",
+            "id": "storyboard_structure_stage",
+            "grid": {"region": "stage"},
+            "layout": {
+                "type": "flow",
+                "direction": "horizontal",
+                "gap": "large",
+                "align": "center",
+            },
+            "children": [raw, structured],
+        },
+        ["story_structure_link"],
+        "story_bug_title",
+    )
+
+
+def _storyboard_compare_stage(beat: Beat) -> tuple[dict[str, Any], list[str], str]:
+    before = {
+        "type": "group",
+        "id": "story_compare_before",
+        "layout": {"type": "stack", "gap": "small", "align": "center"},
+        "children": [
+            {
+                "type": "text",
+                "id": "story_compare_before_label",
+                "content": "Before",
+                "style": "section-heading",
+            },
+            {
+                "type": "box",
+                "id": "story_compare_before_card",
+                "content": "Manual",
+                "style": "muted",
+            },
+            {
+                "type": "text",
+                "id": "story_compare_before_metric",
+                "content": "Hours",
+                "style": "heading",
+            },
+        ],
+    }
+    after = {
+        "type": "group",
+        "id": "story_compare_after",
+        "layout": {"type": "stack", "gap": "small", "align": "center"},
+        "children": [
+            {
+                "type": "text",
+                "id": "story_compare_after_label",
+                "content": "After",
+                "style": "section-heading",
+            },
+            {
+                "type": "box",
+                "id": "story_compare_after_card",
+                "content": _truncate(beat.title, 22),
+                "style": "success",
+            },
+            {
+                "type": "text",
+                "id": "story_compare_after_metric",
+                "content": "Seconds",
+                "style": "heading",
+            },
+        ],
+    }
+    return (
+        {
+            "type": "group",
+            "id": "storyboard_compare_stage",
+            "grid": {"region": "stage"},
+            "layout": {
+                "type": "flow",
+                "direction": "horizontal",
+                "gap": "large",
+                "align": "center",
+            },
+            "children": [before, after],
+        },
+        ["story_compare_link"],
+        "story_compare_after_card",
+    )
+
+
+def _storyboard_actor_card(
+    slot: str, beat: Beat, *, style: str, size_variant: str
+) -> dict[str, Any]:
+    return {
+        "type": "box",
+        "id": f"story_{slot}_card",
+        "actor_id": f"story_actor_{beat.slug}",
+        "content": _truncate(beat.title, 18),
+        "style": style,
+        "size_variant": size_variant,
+    }
+
+
+def _storyboard_dense_field_group(group_id: str, *, active_count: int) -> dict[str, Any]:
+    children: list[dict[str, Any]] = []
+    for index in range(100):
+        children.append(
+            {
+                "type": "circle",
+                "id": f"{group_id}_node_{index + 1:03d}",
+                "actor_id": f"signal_{index + 1:03d}",
+                "content": "",
+                "style": "error" if index < active_count else "muted",
+                "size_variant": "compact",
+            }
+        )
+    return {
+        "type": "group",
+        "id": group_id,
+        "layout": {"type": "grid", "columns": 10, "rows": 10, "gap": "small"},
+        "children": children,
+    }
+
+
+def _storyboard_support_group(beat: Beat) -> dict[str, Any]:
+    tokens = _wrap_lines(beat.detail, width=20, max_lines=3)
+    children = [
+        {
+            "type": "token",
+            "id": f"story_support_{index + 1}",
+            "content": _truncate(line, 18),
+            "style": "muted",
+        }
+        for index, line in enumerate(tokens)
+    ]
+    return {
+        "type": "group",
+        "id": "storyboard_support",
+        "grid": {"region": "support"},
+        "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+        "children": children,
+    }
+
+
+def _storyboard_aside_group(
+    animation_title: str,
+    beat: Beat,
+    scene_kind: str,
+    include_narration: bool,
+) -> dict[str, Any]:
+    aside_lines = [scene_kind.replace("_", " ").title(), _truncate(animation_title, 16)]
+    if not include_narration:
+        aside_lines.append(_truncate(beat.detail, 28))
+    return {
+        "type": "group",
+        "id": "storyboard_aside",
+        "grid": {"region": "aside"},
+        "layout": {"type": "stack", "gap": "small", "align": "top"},
+        "children": [
+            {
+                "type": "text",
+                "id": f"story_aside_{index + 1}",
+                "content": line,
+                "style": "caption" if index else "section-heading",
+            }
+            for index, line in enumerate(aside_lines)
+        ],
     }
 
 

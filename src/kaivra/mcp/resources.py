@@ -59,6 +59,20 @@ RESOURCE_DEFINITIONS = [
         "mimeType": "application/json",
     },
     {
+        "uri": "kaivra://example/system_storyboard_demo",
+        "name": "example_system_storyboard_demo",
+        "title": "Reference Example: System Storyboard Demo",
+        "description": "General-purpose reference example JSON for the system_storyboard pattern.",
+        "mimeType": "application/json",
+    },
+    {
+        "uri": "kaivra://example/qa_copilot_storyboard",
+        "name": "example_qa_copilot_storyboard",
+        "title": "Reference Example: QA Copilot Storyboard",
+        "description": "Acceptance example JSON for a dense operational storyboard.",
+        "mimeType": "application/json",
+    },
+    {
         "uri": "kaivra://document-schema",
         "name": "document_schema",
         "title": "Document Schema",
@@ -84,6 +98,12 @@ def read_resource(uri: str) -> dict[str, Any]:
         "kaivra://example/forward_propagation": _reference_example_text("forward_propagation.json"),
         "kaivra://example/perspectiv_medcase_process_explainer": _reference_example_text(
             "perspectiv_medcase_process_explainer.json"
+        ),
+        "kaivra://example/system_storyboard_demo": _reference_example_text(
+            "system_storyboard_demo.json"
+        ),
+        "kaivra://example/qa_copilot_storyboard": _reference_example_text(
+            "qa_copilot_storyboard.json"
         ),
         "kaivra://document-schema": json.dumps(DocumentSpec.model_json_schema(), indent=2),
     }
@@ -129,6 +149,7 @@ def _authoring_profile() -> str:
 - If you are not using a scene template, set scene-level `layout.type` to `"stack"` so top-level objects flow vertically.
 - Wrap related objects in `group` containers with `layout.type: "flow"` (horizontal rows) or `"stack"` (vertical columns).
 - Available layout types: `center`, `grid`, `flow`, `stack`, `split`, `carousel`.
+- Scene templates can also provide semantic regions. Use `storyboard` when you want a dedicated continuity stage plus support and aside lanes.
 - Use `gap: "small" | "medium" | "large"` on groups to control spacing.
 - Use `direction: "horizontal" | "vertical"` on flow/stack layouts.
 - Use scene-level `layout` with a template only when you intentionally want to override the template defaults.
@@ -183,12 +204,15 @@ Narration: "First, the backend component handles incoming traffic..."
 
 - Prefer persistent document-level state first, then continuity morphs for scene-local objects that evolve from beat to beat.
 - Reuse the same `id` and `content` across consecutive scenes when a value carries forward. The engine morphs it into its new position automatically.
+- Use `actor_id` when the same visual actor should carry across scenes even if local object IDs change by slot or region.
+- Use `continuity_mode: "evolving"` for moderate copy changes on the same actor, or `continuity_mode: "position_only"` for abstract dense actors where motion matters more than text identity.
 - When a data structure spans scenes (array, graph, pipeline), keep the same object IDs. Recreating with new IDs each scene kills the smooth morph.
 - When a concept repeats the same operation, show one concrete worked example, then generalize.
 
 ## Common Mistakes
 
 - Reusing the same `id` for a different label in the next scene. Keep the content close if you want a morph; otherwise rename the object.
+- Forgetting to add `actor_id` when the same actor moves between different slots in a storyboard.
 - Leaving top-level objects flat under the default center layout. Wrap rows and columns in `group` containers with `flow` or `stack`.
 - Drawing connectors across unrelated nodes. Keep connected objects adjacent in their group so straight-line connectors stay legible.
 - Forgetting `spoken_forms` on names the TTS or aligner may hear differently.
@@ -212,6 +236,10 @@ Default for narrated explainers. Use a process-first story arc: why it matters �
 ## `visual_explainer`
 
 Use when the core idea is a concept diagram rather than a process. Still lead with why it matters, but let one strong visual carry most of the explanation.
+
+## `system_storyboard`
+
+Use for persistent-actor narratives where the same signals, components, or issues evolve across scenes. Best for intervention, branching, regrouping, dense signal fields, and high-signal operational explainers.
 
 ## `algorithm_walkthrough`
 
@@ -242,6 +270,11 @@ def _theme_catalog() -> str:
 - Best default for polished demos and explainers
 - Soft depth, UI-like cards, cleaner presentation
 
+## `storyboard_dark`
+
+- Best for dense operational storyboards and high-contrast engineering explainers
+- Dark canvas, compact actor treatment, and stronger state-color separation
+
 ## `whiteboard`
 
 - Best for teaching, sketches, and conceptual walkthroughs
@@ -250,6 +283,7 @@ def _theme_catalog() -> str:
 Recommendation:
 
 - Default to `modern`
+- Reach for `storyboard_dark` when the story depends on persistent actors, dense fields, or sparse reset cards
 - Reach for `material` when the user wants a product-UI feel or asks for a theme example to customize
 - Switch to `whiteboard` only when the user explicitly wants a sketch or classroom feel
 - Use `add_theme` when the user wants a reusable custom palette or card treatment
@@ -266,6 +300,8 @@ Use these as shape references, not templates. Borrow the composition, then rewri
 Read these complete, polished animations before authoring your own JSON. They demonstrate supported v1.2 patterns working together:
 
 - **`examples/reference/perspectiv_medcase_process_explainer.json`** — 6-scene narrated process explainer (How Perspectiv MedCase Works). Shows a persistent carousel chapter tracker, one-column framing, state-flow visuals, persistent objects, continuity, staged connector draws, and user-facing narration. Use this as the primary quality bar for narrated system/process explainers.
+- **`examples/reference/system_storyboard_demo.json`** — General-purpose storyboard reference with dense fields, actor identity, the `storyboard` template, and `storyboard_dark`.
+- **`examples/reference/qa_copilot_storyboard.json`** — Acceptance storyboard for a process-heavy operational narrative. Shows sparse reset cards, dense failure fields, interception, fan-out investigation, classification, regrouping, and compare/payoff scenes without custom engine logic.
 - **`examples/reference/api_how_it_works.json`** — 4-scene narrated explainer (How an API Works). Shows carousel chapter tracker, horizontal flow layouts, connector draws, continuity morphs across scenes, and conversational narration. Material theme, educational pacing.
 - **`examples/reference/forward_propagation.json`** — 6-scene narrated explainer (Forward Propagation in a Neural Network). Shows worked-example arithmetic, stacked layouts, highlight colors (accent/success/warning), and deep continuity where computed values carry across scenes. Material theme, educational pacing.
 - **`examples/demos/semantic_one_column_regions.json`** — Compact one-scene demo of the semantic `one-column` regions: `problem_solution`, `request_pipeline`, `fan_out`, `system_architecture`, and `timeline_steps`.

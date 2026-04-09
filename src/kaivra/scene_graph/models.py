@@ -8,7 +8,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from kaivra.dsl.schema import AnimAction, ObjectType, RelativePositionSpec
+from kaivra.dsl.schema import (
+    AnimAction,
+    ContinuityMode,
+    ObjectType,
+    RelativePositionSpec,
+    SizeVariant,
+)
 from kaivra.utils.geometry import Rect
 
 
@@ -25,6 +31,7 @@ class SceneNode:
     children: list[SceneNode] = field(default_factory=list)
     position: str | None = None  # "above-layout", "top", etc.
     label: str | None = None
+    actor_id: str | None = None
 
     # Connector + Callout
     from_id: str | None = None
@@ -55,6 +62,8 @@ class SceneNode:
     base_scale_x: float = 1.0
     base_scale_y: float = 1.0
     layout_role: str | None = None
+    continuity_mode: ContinuityMode = ContinuityMode.STRICT
+    size_variant: SizeVariant = SizeVariant.DEFAULT
 
 
 @dataclass

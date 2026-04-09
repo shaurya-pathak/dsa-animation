@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 
 from kaivra.audio.timings import AudioCue, AudioTimingData, SceneAudioTiming
 from kaivra.dsl.pacing import (
@@ -337,23 +338,29 @@ def _apply_continuity(prev: ResolvedScene, curr: ResolvedScene, duration: float)
     if duration <= 0:
         return
 
-    shared_ids = _collect_continuity_ids(prev, curr)
-    if not shared_ids:
+    prev_identity_map = _build_continuity_identity_map(prev)
+    curr_identity_map = _build_continuity_identity_map(curr)
+    shared_identities = _collect_continuity_ids(prev, curr)
+    if not shared_identities:
         return
 
-    entering_ids = {node_id for node_id in curr.node_map if node_id not in shared_ids}
-    moved_ids = {
-        node_id
-        for node_id in shared_ids
-        if _has_continuity_motion(prev.node_map[node_id], curr.node_map[node_id])
+    shared_curr_ids = {curr_identity_map[identity].id for identity in shared_identities}
+    shared_prev_ids = {prev_identity_map[identity].id for identity in shared_identities}
+    entering_ids = {node_id for node_id in curr.node_map if node_id not in shared_curr_ids}
+    moved_identities = {
+        identity
+        for identity in shared_identities
+        if _has_continuity_motion(prev_identity_map[identity], curr_identity_map[identity])
     }
-    if not entering_ids and not moved_ids:
+    if not entering_ids and not moved_identities:
         return
 
     parent_map = _build_parent_map(curr.nodes)
     raw_deltas = {
-        node_id: _continuity_delta(prev.node_map[node_id], curr.node_map[node_id])
-        for node_id in shared_ids
+        curr_identity_map[identity].id: _continuity_delta(
+            prev_identity_map[identity], curr_identity_map[identity]
+        )
+        for identity in shared_identities
     }
 
     existing_moves: set[str] = set()
@@ -365,19 +372,20 @@ def _apply_continuity(prev: ResolvedScene, curr: ResolvedScene, duration: float)
 
     fade_duration = min(0.9, max(0.32, duration * 0.4))
     fade_start = duration
-    _stage_continuity_exit(prev, shared_ids, fade_duration)
+    _stage_continuity_exit(prev, shared_prev_ids, fade_duration)
     _delay_scene_opening(curr, duration + fade_duration)
     move_duration = duration
     _stage_continuity_visibility(
-        curr, shared_ids, entering_ids, parent_map, fade_start, fade_duration
+        curr, shared_curr_ids, entering_ids, parent_map, fade_start, fade_duration
     )
 
-    for node_id in shared_ids:
-        if node_id in existing_moves:
-            continue
-        node = curr.node_map[node_id]
-        prev_node = prev.node_map.get(node_id)
+    for identity in shared_identities:
+        node = curr_identity_map[identity]
+        prev_node = prev_identity_map.get(identity)
         if prev_node is None:
+            continue
+        node_id = node.id
+        if node_id in existing_moves:
             continue
         delta = _residual_continuity_delta(node_id, raw_deltas, parent_map)
         if delta is None:
@@ -411,12 +419,13 @@ def _apply_continuity(prev: ResolvedScene, curr: ResolvedScene, duration: float)
                 )
             )
 
-    for node_id in shared_ids:
-        if node_id in existing_moves:
-            continue
-        node = curr.node_map[node_id]
-        prev_node = prev.node_map.get(node_id)
+    for identity in shared_identities:
+        node = curr_identity_map[identity]
+        prev_node = prev_identity_map.get(identity)
         if prev_node is None:
+            continue
+        node_id = node.id
+        if node_id in existing_moves:
             continue
         if _has_continuity_motion(prev_node, node):
             continue
@@ -440,37 +449,115 @@ def _apply_continuity(prev: ResolvedScene, curr: ResolvedScene, duration: float)
 
 def _collect_continuity_ids(prev: ResolvedScene, curr: ResolvedScene) -> set[str]:
     """Return IDs whose visual identity can flow cleanly across scenes."""
+    prev_identity_map = _build_continuity_identity_map(prev)
+    curr_identity_map = _build_continuity_identity_map(curr)
     shared_ids: set[str] = set()
-    for node_id, node in curr.node_map.items():
-        prev_node = prev.node_map.get(node_id)
+    for identity, node in curr_identity_map.items():
+        prev_node = prev_identity_map.get(identity)
         if prev_node is None:
             continue
         if not _continuity_compatible(prev_node, node):
             continue
-        shared_ids.add(node_id)
+        shared_ids.add(identity)
     return shared_ids
+
+
+def _build_continuity_identity_map(scene: ResolvedScene) -> dict[str, SceneNode]:
+    identities: dict[str, SceneNode] = {}
+    for node in scene.node_map.values():
+        identity = _continuity_identity(node)
+        if identity and identity not in identities:
+            identities[identity] = node
+    return identities
+
+
+def _continuity_identity(node: SceneNode) -> str | None:
+    return node.actor_id or node.id
 
 
 def _continuity_compatible(prev_node: SceneNode, node: SceneNode) -> bool:
     """Decide whether two nodes should be treated as the same visual actor."""
     if prev_node.obj_type != node.obj_type:
         return False
-    if prev_node.label != node.label:
-        return False
-    if (
-        abs(prev_node.rect.width - node.rect.width) > 1.0
-        or abs(prev_node.rect.height - node.rect.height) > 1.0
-    ):
-        return False
+    mode = _resolve_continuity_mode(prev_node, node)
+    if mode == "strict":
+        if prev_node.label != node.label:
+            return False
+        if (
+            abs(prev_node.rect.width - node.rect.width) > 1.0
+            or abs(prev_node.rect.height - node.rect.height) > 1.0
+        ):
+            return False
+    else:
+        if not _continuity_labels_compatible(prev_node.label, node.label, mode):
+            return False
+        if not _continuity_geometry_compatible(prev_node, node, mode):
+            return False
     if node.obj_type == ObjectType.CONNECTOR:
+        if mode != "strict":
+            return False
         return prev_node.from_id == node.from_id and prev_node.to_id == node.to_id
     if node.obj_type == ObjectType.CALLOUT:
+        if mode != "strict":
+            return False
         return (
             prev_node.content == node.content
             and prev_node.from_id == node.from_id
             and prev_node.to_id == node.to_id
         )
-    return prev_node.content == node.content
+    if mode == "position_only":
+        return True
+    return _continuity_text_compatible(prev_node.content, node.content, evolving=mode == "evolving")
+
+
+def _resolve_continuity_mode(prev_node: SceneNode, node: SceneNode) -> str:
+    order = {"strict": 0, "evolving": 1, "position_only": 2}
+    prev_mode = prev_node.continuity_mode.value
+    curr_mode = node.continuity_mode.value
+    return prev_mode if order[prev_mode] >= order[curr_mode] else curr_mode
+
+
+def _continuity_labels_compatible(prev_label: str | None, label: str | None, mode: str) -> bool:
+    if mode == "position_only":
+        return True
+    return _continuity_text_compatible(prev_label, label, evolving=mode == "evolving")
+
+
+def _continuity_geometry_compatible(prev_node: SceneNode, node: SceneNode, mode: str) -> bool:
+    width_delta = abs(prev_node.rect.width - node.rect.width)
+    height_delta = abs(prev_node.rect.height - node.rect.height)
+    max_dim = max(
+        prev_node.rect.width,
+        prev_node.rect.height,
+        node.rect.width,
+        node.rect.height,
+        1.0,
+    )
+    if mode == "evolving":
+        tolerance = max(6.0, max_dim * 0.28)
+    else:
+        tolerance = max(12.0, max_dim * 0.6)
+    return width_delta <= tolerance and height_delta <= tolerance
+
+
+def _continuity_text_compatible(prev_text: str | None, text: str | None, *, evolving: bool) -> bool:
+    if prev_text == text:
+        return True
+    if not prev_text or not text:
+        return False
+    if not evolving:
+        return False
+    similarity = SequenceMatcher(None, prev_text.lower(), text.lower()).ratio()
+    overlap = _token_overlap_ratio(prev_text, text)
+    return similarity >= 0.45 or overlap >= 0.5
+
+
+def _token_overlap_ratio(left: str, right: str) -> float:
+    left_tokens = {token for token in left.lower().split() if token}
+    right_tokens = {token for token in right.lower().split() if token}
+    if not left_tokens or not right_tokens:
+        return 0.0
+    return len(left_tokens & right_tokens) / max(len(left_tokens), len(right_tokens))
 
 
 def _relative_move(
@@ -976,10 +1063,11 @@ def _build_node(
         rect=rect,
         content=obj.content,
         style=obj.style,
-        style_props=theme.resolve_style(obj.style),
+        style_props=_resolve_object_style(theme, obj),
         children=children,
         position=obj.position,
         label=obj.label,
+        actor_id=obj.actor_id,
         from_id=from_id,
         to_id=obj.to_id,
         token_id=obj.token_id,
@@ -996,8 +1084,25 @@ def _build_node(
         base_scale_x=float(hints.get("base_scale", 1.0)),
         base_scale_y=float(hints.get("base_scale", 1.0)),
         layout_role=str(hints["layout_role"]) if "layout_role" in hints else None,
+        continuity_mode=obj.continuity_mode,
+        size_variant=obj.size_variant,
     )
     return node
+
+
+def _resolve_object_style(theme: ThemeSpec, obj: ObjectSpec) -> dict[str, float | str]:
+    style = dict(theme.resolve_style(obj.style))
+    variant = obj.size_variant.value
+    if variant == "compact":
+        scale = 0.72
+    elif variant == "hero":
+        scale = 1.18
+    else:
+        scale = 1.0
+    font_size = style.get("font_size", theme.font_size_body)
+    style["font_size"] = max(10, round(font_size * scale))
+    style["size_variant"] = variant
+    return style
 
 
 def _register_children(node: SceneNode, node_map: dict[str, SceneNode]) -> None:
@@ -1620,6 +1725,8 @@ def _apply_scene_template(spec: SceneSpec, persistent_ids: set[str] | None) -> S
         )
     elif template == "one-column":
         layout = _build_one_column_template_layout()
+    elif template == "storyboard":
+        layout = _build_storyboard_template_layout()
     else:
         return spec
 
@@ -1668,7 +1775,9 @@ def _apply_scene_template(spec: SceneSpec, persistent_ids: set[str] | None) -> S
             new_objects.append(obj.model_copy(update={"grid": GridPositionSpec(region="header")}))
         else:
             region = "main"
-            if one_column_uses_semantic_regions:
+            if template == "storyboard":
+                region = "stage"
+            elif one_column_uses_semantic_regions:
                 region = next_semantic_region()
             new_objects.append(obj.model_copy(update={"grid": GridPositionSpec(region=region)}))
 
@@ -1691,6 +1800,23 @@ def _build_one_column_template_layout() -> LayoutSpec:
             "fan_out": {"row": 6, "row_span": 2, "col": 1, "span": 12, "align": "top"},
             "system_architecture": {"row": 8, "row_span": 3, "col": 1, "span": 12, "align": "top"},
             "timeline_steps": {"row": 11, "row_span": 2, "col": 1, "span": 12, "align": "top"},
+        },
+    )
+
+
+def _build_storyboard_template_layout() -> LayoutSpec:
+    """Return the semantic region map for storyboard scenes."""
+    return LayoutSpec(
+        type=LayoutType.GRID,
+        columns=12,
+        rows=12,
+        gap="small",
+        regions={
+            "header": {"row": 1, "row_span": 1, "col": 1, "span": 12, "align": "top"},
+            "stage": {"row": 2, "row_span": 7, "col": 1, "span": 9, "align": "top"},
+            "support": {"row": 9, "row_span": 2, "col": 1, "span": 9, "align": "top"},
+            "aside": {"row": 2, "row_span": 9, "col": 10, "span": 3, "align": "top"},
+            "rail": {"row": 11, "row_span": 2, "col": 1, "span": 12, "align": "top"},
         },
     )
 

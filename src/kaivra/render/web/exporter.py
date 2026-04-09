@@ -551,6 +551,7 @@ function drawNodeVisual(ctx, node, nodeMap) {{
     case 'text': drawText(ctx, node); break;
     case 'box': drawBox(ctx, node); break;
     case 'token': drawToken(ctx, node); break;
+    case 'circle': drawCircle(ctx, node); break;
     case 'connector': drawConnector(ctx, node, nodeMap); break;
     case 'group': drawGroup(ctx, node, nodeMap); break;
     default: drawBox(ctx, node); break;
@@ -561,6 +562,7 @@ function drawNodeShell(ctx, node, nodeMap) {{
   switch(node.type) {{
     case 'box': drawBoxShell(ctx, node); break;
     case 'token': drawTokenShell(ctx, node); break;
+    case 'circle': drawCircle(ctx, node); break;
     default: drawNodeVisual(ctx, node, nodeMap); break;
   }}
 }}
@@ -593,23 +595,31 @@ function drawBox(ctx, node) {{
 
 function drawBoxShell(ctx, node) {{
   const r = node.rect;
+  const sp = node.stylePops || {{}};
+  const fill = sp.fill || THEME.boxFill;
+  const border = sp.border || THEME.boxBorder;
+  const strokeScale = sp.size_variant === 'compact' ? 0.72 : (sp.size_variant === 'hero' ? 1.15 : 1.0);
   roundedRect(ctx, r.x, r.y, r.w, r.h, THEME.boxCornerRadius);
-  ctx.fillStyle = hexToRgba(THEME.boxFill, node._opacity);
+  ctx.fillStyle = hexToRgba(fill, node._opacity);
   ctx.fill();
-  ctx.strokeStyle = hexToRgba(THEME.boxBorder, node._opacity);
-  ctx.lineWidth = THEME.boxBorderWidth;
+  ctx.strokeStyle = hexToRgba(border, node._opacity);
+  ctx.lineWidth = THEME.boxBorderWidth * strokeScale;
   ctx.stroke();
 }}
 
 function drawBoxText(ctx, node) {{
   const r = node.rect;
   if (node.content) {{
-    ctx.font = `${{THEME.fontSizeBody}}px sans-serif`;
-    ctx.fillStyle = hexToRgba(THEME.textColor, node._opacity);
+    const sp = node.stylePops || {{}};
+    const fontSize = sp.font_size || THEME.fontSizeBody;
+    const color = sp.color || THEME.textColor;
+    const weight = sp.font_weight === 'bold' ? '700' : '400';
+    ctx.font = `${{weight}} ${{fontSize}}px sans-serif`;
+    ctx.fillStyle = hexToRgba(color, node._opacity);
     let text = node.content;
     if (node._drawProgress < 1) text = text.substring(0, Math.floor(text.length * node._drawProgress));
     const m = ctx.measureText(text);
-    ctx.fillText(text, r.x + (r.w - m.width) / 2, r.y + r.h / 2 + THEME.fontSizeBody * 0.35);
+    ctx.fillText(text, r.x + (r.w - m.width) / 2, r.y + r.h / 2 + fontSize * 0.35);
   }}
 }}
 
@@ -620,22 +630,30 @@ function drawToken(ctx, node) {{
 
 function drawTokenShell(ctx, node) {{
   const r = node.rect;
+  const sp = node.stylePops || {{}};
+  const fill = sp.fill || THEME.tokenFill;
+  const border = sp.border || THEME.tokenBorder;
+  const strokeScale = sp.size_variant === 'compact' ? 0.72 : (sp.size_variant === 'hero' ? 1.15 : 1.0);
   roundedRect(ctx, r.x, r.y, r.w, r.h, 4);
-  ctx.fillStyle = hexToRgba(THEME.tokenFill, node._opacity);
+  ctx.fillStyle = hexToRgba(fill, node._opacity);
   ctx.fill();
-  ctx.strokeStyle = hexToRgba(THEME.tokenBorder, node._opacity);
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = hexToRgba(border, node._opacity);
+  ctx.lineWidth = 1.5 * strokeScale;
   ctx.stroke();
 }}
 
 function drawTokenText(ctx, node) {{
   const r = node.rect;
   if (node.content) {{
-    ctx.font = `${{THEME.fontSizeBody}}px sans-serif`;
-    ctx.fillStyle = hexToRgba(THEME.textColor, node._opacity);
+    const sp = node.stylePops || {{}};
+    const fontSize = sp.font_size || THEME.fontSizeBody;
+    const color = sp.color || THEME.textColor;
+    const weight = sp.font_weight === 'bold' ? '700' : '400';
+    ctx.font = `${{weight}} ${{fontSize}}px sans-serif`;
+    ctx.fillStyle = hexToRgba(color, node._opacity);
     const text = node.content.trim();
     const m = ctx.measureText(text);
-    ctx.fillText(text, r.x + (r.w - m.width) / 2, r.y + r.h / 2 + THEME.fontSizeBody * 0.35);
+    ctx.fillText(text, r.x + (r.w - m.width) / 2, r.y + r.h / 2 + fontSize * 0.35);
   }}
   if (node.tokenId != null) {{
     ctx.font = '12px sans-serif';
@@ -643,6 +661,31 @@ function drawTokenText(ctx, node) {{
     const tid = String(node.tokenId);
     const m = ctx.measureText(tid);
     ctx.fillText(tid, r.x + (r.w - m.width) / 2, r.y + r.h + 14);
+  }}
+}}
+
+function drawCircle(ctx, node) {{
+  const cx = node.rect.x + node.rect.w / 2;
+  const cy = node.rect.y + node.rect.h / 2;
+  const radius = Math.min(node.rect.w, node.rect.h) / 2;
+  const sp = node.stylePops || {{}};
+  const fill = sp.fill || THEME.boxFill;
+  const border = sp.border || THEME.boxBorder;
+  const color = sp.color || THEME.textColor;
+  const fontSize = sp.font_size || THEME.fontSizeBody;
+  const strokeScale = sp.size_variant === 'compact' ? 0.72 : (sp.size_variant === 'hero' ? 1.15 : 1.0);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fillStyle = hexToRgba(fill, node._opacity);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(border, node._opacity);
+  ctx.lineWidth = THEME.boxBorderWidth * strokeScale;
+  ctx.stroke();
+  if (node.content) {{
+    ctx.font = `${{fontSize}}px sans-serif`;
+    ctx.fillStyle = hexToRgba(color, node._opacity);
+    const m = ctx.measureText(node.content);
+    ctx.fillText(node.content, cx - m.width / 2, cy + fontSize * 0.35);
   }}
 }}
 

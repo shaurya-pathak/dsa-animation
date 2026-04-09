@@ -112,6 +112,10 @@ class ThemeSpec:
             "primary": {"fill": self.accent, "color": "#FFFFFF"},
             "accent": {"fill": self.accent, "border": self.accent},
             "muted": {"fill": self.muted, "color": self.text_light},
+            "success": {"fill": self.success, "border": self.success, "color": "#FFFFFF"},
+            "warning": {"fill": self.warning, "border": self.warning, "color": "#111827"},
+            "error": {"fill": self.error, "border": self.error, "color": "#FFFFFF"},
+            "dark": {"fill": self.primary, "border": self.primary, "color": "#FFFFFF"},
         }
         return styles.get(style, {"font_size": self.font_size_body, "color": self.text_color})
 

@@ -263,6 +263,9 @@ class CairoRenderer:
     def _draw_box_shell(self, ctx: cairo.Context, node: SceneNode) -> None:
         r = node.rect
         cr = self.theme.box_corner_radius
+        style = node.style_props
+        fill_color = style.get("fill", self.theme.box_fill)
+        border_color = style.get("border", self.theme.box_border)
 
         # Shadow
         if self.theme.shadow:
@@ -279,15 +282,15 @@ class CairoRenderer:
             ctx.fill()
 
         # Fill
-        fr, fg, fb, _ = hex_to_rgba(self.theme.box_fill)
+        fr, fg, fb, _ = hex_to_rgba(fill_color)
         self._rounded_rect(ctx, r.x, r.y, r.width, r.height, cr)
         ctx.set_source_rgba(fr, fg, fb, node.opacity)
         ctx.fill_preserve()
 
         # Border
-        br, bg, bb, _ = hex_to_rgba(self.theme.box_border)
+        br, bg, bb, _ = hex_to_rgba(border_color)
         ctx.set_source_rgba(br, bg, bb, node.opacity)
-        ctx.set_line_width(self.theme.box_border_width)
+        ctx.set_line_width(self.theme.box_border_width * self._stroke_scale(node))
         if self.theme.sketch_effect:
             self._sketch_stroke(ctx)
         else:
@@ -296,9 +299,17 @@ class CairoRenderer:
     def _draw_box_text(self, ctx: cairo.Context, node: SceneNode) -> None:
         r = node.rect
         if node.content:
-            ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-            ctx.set_font_size(self.theme.font_size_body)
-            tr, tg, tb, _ = hex_to_rgba(self.theme.text_color)
+            style = node.style_props
+            weight = (
+                cairo.FONT_WEIGHT_BOLD
+                if style.get("font_weight") == "bold"
+                else cairo.FONT_WEIGHT_NORMAL
+            )
+            font_size = style.get("font_size", self.theme.font_size_body)
+            text_color = style.get("color", self.theme.text_color)
+            ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, weight)
+            ctx.set_font_size(font_size)
+            tr, tg, tb, _ = hex_to_rgba(text_color)
             ctx.set_source_rgba(tr, tg, tb, node.opacity)
 
             text = node.content
@@ -318,18 +329,21 @@ class CairoRenderer:
     def _draw_token_shell(self, ctx: cairo.Context, node: SceneNode) -> None:
         r = node.rect
         cr = self.theme.token_corner_radius
+        style = node.style_props
+        fill_color = style.get("fill", self.theme.token_fill)
+        border_color = style.get("border", self.theme.token_border)
 
         # Fill — fade in with draw_progress
-        fr, fg, fb, _ = hex_to_rgba(self.theme.token_fill)
+        fr, fg, fb, _ = hex_to_rgba(fill_color)
         self._rounded_rect(ctx, r.x, r.y, r.width, r.height, cr)
         fill_opacity = node.opacity * min(1.0, node.draw_progress * 2)  # fill appears first half
         ctx.set_source_rgba(fr, fg, fb, fill_opacity)
         ctx.fill()
 
         # Border — draws progressively (perimeter stroke animation)
-        br, bg, bb, _ = hex_to_rgba(self.theme.token_border)
+        br, bg, bb, _ = hex_to_rgba(border_color)
         ctx.set_source_rgba(br, bg, bb, node.opacity)
-        ctx.set_line_width(2.0)
+        ctx.set_line_width(2.0 * self._stroke_scale(node))
         if node.draw_progress < 1.0:
             # Compute perimeter and use dash to reveal progressively
             perimeter = 2 * (r.width + r.height)
@@ -345,9 +359,17 @@ class CairoRenderer:
     def _draw_token_text(self, ctx: cairo.Context, node: SceneNode) -> None:
         r = node.rect
         if node.content:
-            ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-            ctx.set_font_size(self.theme.font_size_body)
-            tr, tg, tb, _ = hex_to_rgba(self.theme.text_color)
+            style = node.style_props
+            weight = (
+                cairo.FONT_WEIGHT_BOLD
+                if style.get("font_weight") == "bold"
+                else cairo.FONT_WEIGHT_NORMAL
+            )
+            font_size = style.get("font_size", self.theme.font_size_body)
+            text_color = style.get("color", self.theme.text_color)
+            ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, weight)
+            ctx.set_font_size(font_size)
+            tr, tg, tb, _ = hex_to_rgba(text_color)
             ctx.set_source_rgba(tr, tg, tb, node.opacity)
 
             text = node.content.strip()
@@ -444,25 +466,38 @@ class CairoRenderer:
     def _draw_circle(self, ctx: cairo.Context, node: SceneNode) -> None:
         cx, cy = node.rect.center.x, node.rect.center.y
         radius = min(node.rect.width, node.rect.height) / 2
+        style = node.style_props
+        fill_color = style.get("fill", self.theme.box_fill)
+        border_color = style.get("border", self.theme.box_border)
+        text_color = style.get("color", self.theme.text_color)
+        font_size = style.get("font_size", self.theme.font_size_body)
 
-        fr, fg, fb, _ = hex_to_rgba(self.theme.box_fill)
+        fr, fg, fb, _ = hex_to_rgba(fill_color)
         ctx.arc(cx, cy, radius, 0, 2 * math.pi)
         ctx.set_source_rgba(fr, fg, fb, node.opacity)
         ctx.fill_preserve()
 
-        br, bg, bb, _ = hex_to_rgba(self.theme.box_border)
+        br, bg, bb, _ = hex_to_rgba(border_color)
         ctx.set_source_rgba(br, bg, bb, node.opacity)
-        ctx.set_line_width(self.theme.box_border_width)
+        ctx.set_line_width(self.theme.box_border_width * self._stroke_scale(node))
         ctx.stroke()
 
         if node.content:
             ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-            ctx.set_font_size(self.theme.font_size_body)
-            tr, tg, tb, _ = hex_to_rgba(self.theme.text_color)
+            ctx.set_font_size(font_size)
+            tr, tg, tb, _ = hex_to_rgba(text_color)
             ctx.set_source_rgba(tr, tg, tb, node.opacity)
             extents = ctx.text_extents(node.content)
             ctx.move_to(cx - extents.width / 2, cy + extents.height / 2)
             ctx.show_text(node.content)
+
+    def _stroke_scale(self, node: SceneNode) -> float:
+        variant = node.style_props.get("size_variant")
+        if variant == "compact":
+            return 0.72
+        if variant == "hero":
+            return 1.15
+        return 1.0
 
     def _draw_highlight(self, ctx: cairo.Context, node: SceneNode) -> None:
         """Draw a glow/highlight overlay on the node."""

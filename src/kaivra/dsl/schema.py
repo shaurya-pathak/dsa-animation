@@ -87,6 +87,18 @@ class PacingPreset(str, Enum):
     EDUCATIONAL = "educational"
 
 
+class ContinuityMode(str, Enum):
+    STRICT = "strict"
+    EVOLVING = "evolving"
+    POSITION_ONLY = "position_only"
+
+
+class SizeVariant(str, Enum):
+    COMPACT = "compact"
+    DEFAULT = "default"
+    HERO = "hero"
+
+
 class AudienceLevel(str, Enum):
     LAYPERSON = "layperson"
     MIXED = "mixed"
@@ -309,6 +321,25 @@ class ObjectSpec(BaseModel):
     )
     label: str | None = Field(
         None, description="Small label displayed on the object (e.g. badge text)"
+    )
+    actor_id: str | None = Field(
+        None,
+        description=(
+            "Stable actor identity used for continuity across scenes. "
+            "When omitted, continuity falls back to the object's id."
+        ),
+    )
+    continuity_mode: ContinuityMode = Field(
+        ContinuityMode.STRICT,
+        description=(
+            "Continuity matching policy. `strict` preserves current behavior, "
+            "`evolving` allows moderate content evolution, and "
+            "`position_only` keeps motion continuity for abstract actors."
+        ),
+    )
+    size_variant: SizeVariant = Field(
+        SizeVariant.DEFAULT,
+        description="Visual size preset: compact, default, or hero.",
     )
     visible: bool | None = Field(
         None, description="Default visibility for this object (overrides scene auto_visible)"
@@ -583,10 +614,11 @@ class SceneSpec(BaseModel):
     template: str | None = Field(
         None,
         description=(
-            "Layout template: 'two-column' or 'one-column'. "
+            "Layout template: 'two-column', 'one-column', or 'storyboard'. "
             "'one-column' provides a header, backward-compatible 'main', and semantic "
             "regions such as 'problem_solution', 'request_pipeline', 'fan_out', "
-            "'system_architecture', and 'timeline_steps'."
+            "'system_architecture', and 'timeline_steps'. 'storyboard' provides "
+            "header, stage, support, aside, and rail regions for persistent-actor narratives."
         ),
     )
     narration: str | None = Field(

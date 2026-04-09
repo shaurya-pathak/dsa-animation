@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 # Bump this when the DSL schema changes in ways LLMs should know about.
-CURRENT_DSL_VERSION = "1.3"
+CURRENT_DSL_VERSION = "1.4"
 
 # Short changelog an LLM can scan to understand what changed.
 # Keep entries terse — this may be injected into tool responses.
 DSL_CHANGELOG: list[tuple[str, str]] = [
+    (
+        "1.4",
+        "Added actor_id-based continuity matching, continuity_mode (strict/evolving/position_only), and size_variant (compact/default/hero) for dense storyboard scenes.; Added the storyboard scene template, the system_storyboard starter pattern, and the storyboard_dark built-in theme.",
+    ),
     (
         "1.3",
         "Added semantic named regions to the one-column template: problem_solution, request_pipeline, fan_out, system_architecture, and timeline_steps; each maps to a dedicated vertical band in the 12-row grid.; Added relative motion translations (translate/from_translate with normalized multipliers) as the preferred approach for move and move-to animations; absolute pixel offset fields (offset_x/y, from_offset_x/y) are retained for backwards compatibility; the unused absolute layout mode is removed from the DSL surface.; Added semantic timing tokens (short/medium/long) and high-level reveal/reveal-children animation actions; introduced repo-level kaivra.config.json for timing customization; added anchor, gap, cue, step, and order fields to AnimSpec for declarative animation sequencing.",

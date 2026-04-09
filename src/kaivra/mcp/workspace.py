@@ -381,6 +381,10 @@ class KaivraWorkspace:
                             "label": "Visual explainer — concept-first diagram with narrated beats",
                         },
                         {
+                            "value": "system_storyboard",
+                            "label": "System storyboard — persistent actors, regrouping, and operational scene transformations",
+                        },
+                        {
                             "value": "algorithm_walkthrough",
                             "label": "Algorithm walkthrough — step-by-step code/data visualization",
                         },
@@ -404,6 +408,10 @@ class KaivraWorkspace:
                         {
                             "value": "modern",
                             "label": "Modern — clean light background with accent colors (default)",
+                        },
+                        {
+                            "value": "storyboard_dark",
+                            "label": "Storyboard Dark — high-contrast operational demo theme",
                         },
                         {
                             "value": "material",
@@ -2305,23 +2313,29 @@ def _continuity_content_findings(doc: Any) -> list[CheckFinding]:
         return []
 
     findings: list[CheckFinding] = []
-    previous_scene_content: dict[str, tuple[str, str | None]] | None = None
+    previous_scene_content: dict[str, tuple[str, str, str | None, str]] | None = None
     previous_scene_id: str | None = None
 
     for scene_index, scene_spec in enumerate(doc.scenes):
         scene_id = scene_spec.id or f"scene_{scene_index}"
         current_content = _collect_scene_content_map(getattr(scene_spec, "objects", None) or [])
         if previous_scene_content is not None and previous_scene_id is not None:
-            for object_id, (content, object_type) in current_content.items():
-                prior = previous_scene_content.get(object_id)
+            for actor_identity, (
+                object_id,
+                content,
+                object_type,
+                continuity_mode,
+            ) in current_content.items():
+                prior = previous_scene_content.get(actor_identity)
                 if prior is None:
                     continue
-                prior_content, prior_type = prior
+                _, prior_content, prior_type, prior_mode = prior
                 if _should_skip_continuity_warning(
                     object_id=object_id,
                     object_type=object_type,
                     prior_content=prior_content,
                     content=content,
+                    continuity_mode=continuity_mode or prior_mode,
                 ):
                     continue
                 if not content or not prior_content:
@@ -2369,26 +2383,46 @@ def _should_skip_continuity_warning(
     object_type: str | None,
     prior_content: str,
     content: str,
+    continuity_mode: str,
 ) -> bool:
+    if continuity_mode == "position_only":
+        return True
+    if continuity_mode == "evolving":
+        similarity = SequenceMatcher(None, prior_content.lower(), content.lower()).ratio()
+        overlap = _token_overlap_ratio(
+            _tokenize_for_overlap(prior_content),
+            _tokenize_for_overlap(content),
+        )
+        if similarity >= 0.2 or overlap >= 0.2:
+            return True
     if object_type == "text" and object_id in _COMMON_HEADING_IDS:
         if len(prior_content.split()) <= 6 and len(content.split()) <= 6:
             return True
     return False
 
 
-def _collect_scene_content_map(objects: list[Any]) -> dict[str, tuple[str, str | None]]:
-    content_map: dict[str, tuple[str, str | None]] = {}
+def _collect_scene_content_map(objects: list[Any]) -> dict[str, tuple[str, str, str | None, str]]:
+    content_map: dict[str, tuple[str, str, str | None, str]] = {}
 
     def walk(nodes: list[Any]) -> None:
         for node in nodes:
             object_id = getattr(node, "id", None)
             if object_id:
+                actor_id = getattr(node, "actor_id", None) or object_id
                 content_value = getattr(node, "content", None)
                 if isinstance(content_value, str) and content_value.strip():
                     object_type = getattr(node, "type", None)
                     if hasattr(object_type, "value"):
                         object_type = object_type.value
-                    content_map[object_id] = (content_value.strip(), object_type)
+                    continuity_mode = getattr(node, "continuity_mode", "strict")
+                    if hasattr(continuity_mode, "value"):
+                        continuity_mode = continuity_mode.value
+                    content_map[actor_id] = (
+                        object_id,
+                        content_value.strip(),
+                        object_type,
+                        str(continuity_mode),
+                    )
             walk(getattr(node, "children", None) or [])
 
     walk(objects)

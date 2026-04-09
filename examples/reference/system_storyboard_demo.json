@@ -1,0 +1,325 @@
+{
+  "version": "1.4",
+  "meta": {
+    "title": "System Storyboard Demo",
+    "resolution": [1920, 1080],
+    "fps": 30,
+    "theme": "storyboard_dark",
+    "show_subtitles": false,
+    "continuity": true
+  },
+  "scenes": [
+    {
+      "id": "intro",
+      "duration": "6s",
+      "template": "storyboard",
+      "narration": "A good storyboard keeps the same actors on screen while their roles change.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "principle_card",
+          "grid": {"region": "stage"},
+          "layout": {"type": "stack", "gap": "medium", "align": "center"},
+          "children": [
+            {"type": "text", "id": "principle_title", "content": "System Storyboard", "style": "heading"},
+            {"type": "text", "id": "principle_body", "content": "Persistent actors. Clear transformations. Minimal text.", "style": "caption"}
+          ]
+        }
+      ],
+      "animations": [
+        {"action": "fade-in", "target": "principle_card", "at": "0s", "duration": "1s"}
+      ]
+    },
+    {
+      "id": "state",
+      "duration": "7s",
+      "template": "storyboard",
+      "narration": "The same three actors move through the story while the active state becomes the focus.",
+      "objects": [
+        {"type": "text", "id": "heading_state", "content": "Stable Actors", "style": "heading"},
+        {"type": "connector", "id": "state_prev_link", "from": "state_prev", "to": "state_current"},
+        {"type": "connector", "id": "state_next_link", "from": "state_current", "to": "state_next"},
+        {
+          "type": "group",
+          "id": "state_stage",
+          "grid": {"region": "stage"},
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+          "children": [
+            {"type": "box", "id": "state_prev", "actor_id": "actor_request", "content": "Incoming Request", "style": "muted"},
+            {"type": "box", "id": "state_current", "actor_id": "actor_triage", "content": "Triage", "style": "primary", "size_variant": "hero"},
+            {"type": "box", "id": "state_next", "actor_id": "actor_resolution", "content": "Resolution", "style": "accent"}
+          ]
+        },
+        {
+          "type": "group",
+          "id": "state_support",
+          "grid": {"region": "support"},
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+          "children": [
+            {"type": "token", "id": "state_support_1", "content": "Stable identity", "style": "muted"},
+            {"type": "token", "id": "state_support_2", "content": "Clear focus", "style": "muted"},
+            {"type": "token", "id": "state_support_3", "content": "Scene continuity", "style": "muted"}
+          ]
+        }
+      ],
+      "animations": [
+        {"action": "fade-in", "target": "heading_state", "at": "0s", "duration": "0.7s"},
+        {"action": "fade-in", "target": "state_stage", "at": "0.2s", "duration": "0.8s"},
+        {"action": "draw", "target": "state_prev_link", "at": "0.6s", "duration": "0.6s"},
+        {"action": "draw", "target": "state_next_link", "at": "0.9s", "duration": "0.6s"},
+        {"action": "highlight", "target": "state_current", "at": "1.2s", "duration": "1.3s", "color": "accent"},
+        {"action": "fade-in", "target": "state_support", "at": "1.2s", "duration": "0.7s"}
+      ]
+    },
+    {
+      "id": "transform",
+      "duration": "7s",
+      "template": "storyboard",
+      "narration": "Dense fields can collapse into a smaller structure without losing the sense that they are the same set of signals.",
+      "objects": [
+        {"type": "text", "id": "heading_transform", "content": "Dense Field To Structure", "style": "heading"},
+        {"type": "connector", "id": "transform_link", "from": "signal_grid", "to": "cluster_target"},
+        {
+          "type": "group",
+          "id": "story_transform_stage",
+          "grid": {"region": "stage"},
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+          "children": [
+            {
+              "type": "group",
+              "id": "signal_grid",
+              "layout": {"type": "grid", "columns": 10, "rows": 10, "gap": "small"},
+              "children": [
+                {"type": "circle", "id": "signal_001", "actor_id": "signal_001", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_002", "actor_id": "signal_002", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_003", "actor_id": "signal_003", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_004", "actor_id": "signal_004", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_005", "actor_id": "signal_005", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_006", "actor_id": "signal_006", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_007", "actor_id": "signal_007", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_008", "actor_id": "signal_008", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_009", "actor_id": "signal_009", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_010", "actor_id": "signal_010", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_011", "actor_id": "signal_011", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_012", "actor_id": "signal_012", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_013", "actor_id": "signal_013", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_014", "actor_id": "signal_014", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_015", "actor_id": "signal_015", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_016", "actor_id": "signal_016", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_017", "actor_id": "signal_017", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_018", "actor_id": "signal_018", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_019", "actor_id": "signal_019", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_020", "actor_id": "signal_020", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_021", "actor_id": "signal_021", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_022", "actor_id": "signal_022", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_023", "actor_id": "signal_023", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_024", "actor_id": "signal_024", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_025", "actor_id": "signal_025", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_026", "actor_id": "signal_026", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_027", "actor_id": "signal_027", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_028", "actor_id": "signal_028", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_029", "actor_id": "signal_029", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_030", "actor_id": "signal_030", "style": "error", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_031", "actor_id": "signal_031", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_032", "actor_id": "signal_032", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_033", "actor_id": "signal_033", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_034", "actor_id": "signal_034", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_035", "actor_id": "signal_035", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_036", "actor_id": "signal_036", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_037", "actor_id": "signal_037", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_038", "actor_id": "signal_038", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_039", "actor_id": "signal_039", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_040", "actor_id": "signal_040", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_041", "actor_id": "signal_041", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_042", "actor_id": "signal_042", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_043", "actor_id": "signal_043", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_044", "actor_id": "signal_044", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_045", "actor_id": "signal_045", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_046", "actor_id": "signal_046", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_047", "actor_id": "signal_047", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_048", "actor_id": "signal_048", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_049", "actor_id": "signal_049", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_050", "actor_id": "signal_050", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_051", "actor_id": "signal_051", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_052", "actor_id": "signal_052", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_053", "actor_id": "signal_053", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_054", "actor_id": "signal_054", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_055", "actor_id": "signal_055", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_056", "actor_id": "signal_056", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_057", "actor_id": "signal_057", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_058", "actor_id": "signal_058", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_059", "actor_id": "signal_059", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_060", "actor_id": "signal_060", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_061", "actor_id": "signal_061", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_062", "actor_id": "signal_062", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_063", "actor_id": "signal_063", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_064", "actor_id": "signal_064", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_065", "actor_id": "signal_065", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_066", "actor_id": "signal_066", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_067", "actor_id": "signal_067", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_068", "actor_id": "signal_068", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_069", "actor_id": "signal_069", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_070", "actor_id": "signal_070", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_071", "actor_id": "signal_071", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_072", "actor_id": "signal_072", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_073", "actor_id": "signal_073", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_074", "actor_id": "signal_074", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_075", "actor_id": "signal_075", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_076", "actor_id": "signal_076", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_077", "actor_id": "signal_077", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_078", "actor_id": "signal_078", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_079", "actor_id": "signal_079", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_080", "actor_id": "signal_080", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_081", "actor_id": "signal_081", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_082", "actor_id": "signal_082", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_083", "actor_id": "signal_083", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_084", "actor_id": "signal_084", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_085", "actor_id": "signal_085", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_086", "actor_id": "signal_086", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_087", "actor_id": "signal_087", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_088", "actor_id": "signal_088", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_089", "actor_id": "signal_089", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_090", "actor_id": "signal_090", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_091", "actor_id": "signal_091", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_092", "actor_id": "signal_092", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_093", "actor_id": "signal_093", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_094", "actor_id": "signal_094", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_095", "actor_id": "signal_095", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_096", "actor_id": "signal_096", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_097", "actor_id": "signal_097", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_098", "actor_id": "signal_098", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_099", "actor_id": "signal_099", "style": "muted", "size_variant": "compact"},
+                {"type": "circle", "id": "signal_100", "actor_id": "signal_100", "style": "muted", "size_variant": "compact"}
+              ]
+            },
+            {"type": "box", "id": "cluster_target", "actor_id": "cluster_target", "content": "Semantic Cluster", "style": "warning", "size_variant": "hero"}
+          ]
+        },
+        {
+          "type": "group",
+          "id": "transform_support",
+          "grid": {"region": "support"},
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+          "children": [
+            {"type": "token", "id": "transform_support_1", "content": "10x10 compact grid", "style": "muted"},
+            {"type": "token", "id": "transform_support_2", "content": "30 active signals", "style": "muted"},
+            {"type": "token", "id": "transform_support_3", "content": "Reusable continuity actors", "style": "muted"}
+          ]
+        }
+      ],
+      "animations": [
+        {"action": "fade-in", "target": "heading_transform", "at": "0s", "duration": "0.7s"},
+        {"action": "fade-in", "target": "story_transform_stage", "at": "0.2s", "duration": "1.0s"},
+        {"action": "draw", "target": "transform_link", "at": "0.9s", "duration": "0.8s"},
+        {"action": "highlight", "target": "cluster_target", "at": "1.4s", "duration": "1.4s", "color": "warning"},
+        {"action": "fade-in", "target": "transform_support", "at": "1.2s", "duration": "0.7s"}
+      ]
+    },
+    {
+      "id": "inspect",
+      "duration": "7s",
+      "template": "storyboard",
+      "narration": "One actor can fan out into multiple evidence sources without changing the overall visual language.",
+      "objects": [
+        {"type": "text", "id": "heading_inspect", "content": "Inspect", "style": "heading"},
+        {"type": "connector", "id": "inspect_link_1", "from": "inspect_focus", "to": "inspect_logs"},
+        {"type": "connector", "id": "inspect_link_2", "from": "inspect_focus", "to": "inspect_fs"},
+        {"type": "connector", "id": "inspect_link_3", "from": "inspect_focus", "to": "inspect_state"},
+        {
+          "type": "group",
+          "id": "inspect_stage",
+          "grid": {"region": "stage"},
+          "layout": {"type": "stack", "gap": "large", "align": "center"},
+          "children": [
+            {"type": "circle", "id": "inspect_focus", "actor_id": "actor_triage", "content": "AI", "style": "accent", "size_variant": "hero"},
+            {
+              "type": "group",
+              "id": "inspect_targets",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+              "children": [
+                {"type": "token", "id": "inspect_logs", "content": "Logs", "style": "muted"},
+                {"type": "token", "id": "inspect_fs", "content": "Filesystem", "style": "muted"},
+                {"type": "token", "id": "inspect_state", "content": "GPU State", "style": "muted"}
+              ]
+            }
+          ]
+        }
+      ],
+      "animations": [
+        {"action": "fade-in", "target": "heading_inspect", "at": "0s", "duration": "0.7s"},
+        {"action": "fade-in", "target": "inspect_stage", "at": "0.2s", "duration": "0.8s"},
+        {"action": "draw", "target": "inspect_link_1", "at": "0.8s", "duration": "0.6s"},
+        {"action": "draw", "target": "inspect_link_2", "at": "1.0s", "duration": "0.6s"},
+        {"action": "draw", "target": "inspect_link_3", "at": "1.2s", "duration": "0.6s"},
+        {"action": "highlight", "target": "inspect_focus", "at": "1.4s", "duration": "1.4s", "color": "accent"}
+      ]
+    },
+    {
+      "id": "compare",
+      "duration": "7s",
+      "template": "storyboard",
+      "narration": "Storyboards should make the before and after feel obvious in one glance.",
+      "objects": [
+        {"type": "text", "id": "heading_compare", "content": "Before And After", "style": "heading"},
+        {"type": "connector", "id": "compare_link", "from": "compare_before_card", "to": "compare_after_card"},
+        {
+          "type": "group",
+          "id": "compare_stage",
+          "grid": {"region": "stage"},
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+          "children": [
+            {
+              "type": "group",
+              "id": "compare_before",
+              "layout": {"type": "stack", "gap": "small", "align": "center"},
+              "children": [
+                {"type": "text", "id": "compare_before_label", "content": "Before", "style": "section-heading"},
+                {"type": "box", "id": "compare_before_card", "content": "Manual triage", "style": "muted"},
+                {"type": "text", "id": "compare_before_metric", "content": "Hours", "style": "heading"}
+              ]
+            },
+            {
+              "type": "group",
+              "id": "compare_after",
+              "layout": {"type": "stack", "gap": "small", "align": "center"},
+              "children": [
+                {"type": "text", "id": "compare_after_label", "content": "After", "style": "section-heading"},
+                {"type": "box", "id": "compare_after_card", "content": "Autonomous triage", "style": "success"},
+                {"type": "text", "id": "compare_after_metric", "content": "Seconds", "style": "heading"}
+              ]
+            }
+          ]
+        }
+      ],
+      "animations": [
+        {"action": "fade-in", "target": "heading_compare", "at": "0s", "duration": "0.7s"},
+        {"action": "fade-in", "target": "compare_stage", "at": "0.2s", "duration": "0.8s"},
+        {"action": "draw", "target": "compare_link", "at": "0.8s", "duration": "0.7s"},
+        {"action": "highlight", "target": "compare_after_card", "at": "1.3s", "duration": "1.2s", "color": "success"}
+      ]
+    },
+    {
+      "id": "summary",
+      "duration": "6s",
+      "template": "storyboard",
+      "narration": "The same primitives support dense fields, transformations, branching, and payoff slides without turning the DSL into a slide editor.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "summary_panel",
+          "grid": {"region": "stage"},
+          "layout": {"type": "stack", "gap": "medium", "align": "center"},
+          "children": [
+            {"type": "text", "id": "summary_title", "content": "Reusable Storyboard Primitives", "style": "heading"},
+            {"type": "token", "id": "summary_token_1", "content": "Actor identity", "style": "accent"},
+            {"type": "token", "id": "summary_token_2", "content": "Dense layouts", "style": "accent"},
+            {"type": "token", "id": "summary_token_3", "content": "Scene transformations", "style": "success"}
+          ]
+        }
+      ],
+      "animations": [
+        {"action": "fade-in", "target": "summary_panel", "at": "0s", "duration": "1s"}
+      ]
+    }
+  ]
+}
