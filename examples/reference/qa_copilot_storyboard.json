@@ -2,7 +2,10 @@
   "version": "1.4",
   "meta": {
     "title": "QA Copilot",
-    "resolution": [1920, 1080],
+    "resolution": [
+      1920,
+      1080
+    ],
     "fps": 30,
     "theme": "storyboard_dark",
     "show_subtitles": false,
@@ -11,454 +14,3578 @@
   "scenes": [
     {
       "id": "title_card",
-      "duration": "5s",
+      "duration": "4s",
       "template": "storyboard",
-      "narration": "This is about removing manual triage from the test cycle.",
+      "narration": "QA Copilot turns a wall of failures into a clear decision path.",
       "objects": [
         {
           "type": "group",
           "id": "title_panel",
-          "grid": {"region": "stage"},
-          "layout": {"type": "stack", "gap": "medium", "align": "center"},
+          "grid": {
+            "region": "stage"
+          },
+          "layout": {
+            "type": "stack",
+            "gap": "large",
+            "align": "center"
+          },
           "children": [
-            {"type": "text", "id": "title_main", "content": "QA Copilot", "style": "heading"},
-            {"type": "text", "id": "title_sub", "content": "Autonomous Test Failure Triage for CQA", "style": "caption"}
+            {
+              "type": "text",
+              "id": "title_main",
+              "content": "QA Copilot",
+              "style": "heading"
+            },
+            {
+              "type": "text",
+              "id": "title_sub",
+              "content": "100 failures. One manual bottleneck.",
+              "style": "section-heading"
+            }
           ]
         }
       ],
       "animations": [
-        {"action": "fade-in", "target": "title_panel", "at": "0s", "duration": "1s"}
+        {
+          "action": "fade-in",
+          "target": "title_panel",
+          "at": "0s",
+          "duration": "0.9s"
+        }
       ]
     },
     {
-      "id": "scale_explosion",
+      "id": "signal_grid_gray",
+      "duration": "6s",
+      "template": "storyboard",
+      "narration": "The run lands as one hundred raw failure signals.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "gray_grid",
+          "grid": {
+            "row": 3,
+            "row_span": 9,
+            "col": 1,
+            "span": 12
+          },
+          "layout": {
+            "type": "grid",
+            "columns": 10,
+            "rows": 10,
+            "gap": "small"
+          },
+          "children": [
+            {
+              "type": "circle",
+              "id": "signal_001",
+              "actor_id": "signal_001",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_002",
+              "actor_id": "signal_002",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_003",
+              "actor_id": "signal_003",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_004",
+              "actor_id": "signal_004",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_005",
+              "actor_id": "signal_005",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_006",
+              "actor_id": "signal_006",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_007",
+              "actor_id": "signal_007",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_008",
+              "actor_id": "signal_008",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_009",
+              "actor_id": "signal_009",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_010",
+              "actor_id": "signal_010",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_011",
+              "actor_id": "signal_011",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_012",
+              "actor_id": "signal_012",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_013",
+              "actor_id": "signal_013",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_014",
+              "actor_id": "signal_014",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_015",
+              "actor_id": "signal_015",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_016",
+              "actor_id": "signal_016",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_017",
+              "actor_id": "signal_017",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_018",
+              "actor_id": "signal_018",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_019",
+              "actor_id": "signal_019",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_020",
+              "actor_id": "signal_020",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_021",
+              "actor_id": "signal_021",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_022",
+              "actor_id": "signal_022",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_023",
+              "actor_id": "signal_023",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_024",
+              "actor_id": "signal_024",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_025",
+              "actor_id": "signal_025",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_026",
+              "actor_id": "signal_026",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_027",
+              "actor_id": "signal_027",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_028",
+              "actor_id": "signal_028",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_029",
+              "actor_id": "signal_029",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_030",
+              "actor_id": "signal_030",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_031",
+              "actor_id": "signal_031",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_032",
+              "actor_id": "signal_032",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_033",
+              "actor_id": "signal_033",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_034",
+              "actor_id": "signal_034",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_035",
+              "actor_id": "signal_035",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_036",
+              "actor_id": "signal_036",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_037",
+              "actor_id": "signal_037",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_038",
+              "actor_id": "signal_038",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_039",
+              "actor_id": "signal_039",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_040",
+              "actor_id": "signal_040",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_041",
+              "actor_id": "signal_041",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_042",
+              "actor_id": "signal_042",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_043",
+              "actor_id": "signal_043",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_044",
+              "actor_id": "signal_044",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_045",
+              "actor_id": "signal_045",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_046",
+              "actor_id": "signal_046",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_047",
+              "actor_id": "signal_047",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_048",
+              "actor_id": "signal_048",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_049",
+              "actor_id": "signal_049",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_050",
+              "actor_id": "signal_050",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_051",
+              "actor_id": "signal_051",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_052",
+              "actor_id": "signal_052",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_053",
+              "actor_id": "signal_053",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_054",
+              "actor_id": "signal_054",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_055",
+              "actor_id": "signal_055",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_056",
+              "actor_id": "signal_056",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_057",
+              "actor_id": "signal_057",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_058",
+              "actor_id": "signal_058",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_059",
+              "actor_id": "signal_059",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_060",
+              "actor_id": "signal_060",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_061",
+              "actor_id": "signal_061",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_062",
+              "actor_id": "signal_062",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_063",
+              "actor_id": "signal_063",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_064",
+              "actor_id": "signal_064",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_065",
+              "actor_id": "signal_065",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_066",
+              "actor_id": "signal_066",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_067",
+              "actor_id": "signal_067",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_068",
+              "actor_id": "signal_068",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_069",
+              "actor_id": "signal_069",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_070",
+              "actor_id": "signal_070",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_071",
+              "actor_id": "signal_071",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_072",
+              "actor_id": "signal_072",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_073",
+              "actor_id": "signal_073",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_074",
+              "actor_id": "signal_074",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_075",
+              "actor_id": "signal_075",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_076",
+              "actor_id": "signal_076",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_077",
+              "actor_id": "signal_077",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_078",
+              "actor_id": "signal_078",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_079",
+              "actor_id": "signal_079",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_080",
+              "actor_id": "signal_080",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_081",
+              "actor_id": "signal_081",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_082",
+              "actor_id": "signal_082",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_083",
+              "actor_id": "signal_083",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_084",
+              "actor_id": "signal_084",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_085",
+              "actor_id": "signal_085",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_086",
+              "actor_id": "signal_086",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_087",
+              "actor_id": "signal_087",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_088",
+              "actor_id": "signal_088",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_089",
+              "actor_id": "signal_089",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_090",
+              "actor_id": "signal_090",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_091",
+              "actor_id": "signal_091",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_092",
+              "actor_id": "signal_092",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_093",
+              "actor_id": "signal_093",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_094",
+              "actor_id": "signal_094",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_095",
+              "actor_id": "signal_095",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_096",
+              "actor_id": "signal_096",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_097",
+              "actor_id": "signal_097",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_098",
+              "actor_id": "signal_098",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_099",
+              "actor_id": "signal_099",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_100",
+              "actor_id": "signal_100",
+              "style": "muted",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            }
+          ]
+        }
+      ],
+      "animations": [
+        {
+          "action": "fade-in",
+          "target": "gray_grid",
+          "at": "0.2s",
+          "duration": "0.8s"
+        }
+      ]
+    },
+    {
+      "id": "signal_grid_classified",
+      "duration": "6s",
+      "template": "storyboard",
+      "narration": "All of them need a decision. Roughly seventy resolve to automation and thirty to product issues.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "classified_grid",
+          "grid": {
+            "row": 3,
+            "row_span": 9,
+            "col": 1,
+            "span": 12
+          },
+          "layout": {
+            "type": "grid",
+            "columns": 10,
+            "rows": 10,
+            "gap": "small"
+          },
+          "children": [
+            {
+              "type": "circle",
+              "id": "signal_001",
+              "actor_id": "signal_001",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_002",
+              "actor_id": "signal_002",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_003",
+              "actor_id": "signal_003",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_004",
+              "actor_id": "signal_004",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_005",
+              "actor_id": "signal_005",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_006",
+              "actor_id": "signal_006",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_007",
+              "actor_id": "signal_007",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_008",
+              "actor_id": "signal_008",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_009",
+              "actor_id": "signal_009",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_010",
+              "actor_id": "signal_010",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_011",
+              "actor_id": "signal_011",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_012",
+              "actor_id": "signal_012",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_013",
+              "actor_id": "signal_013",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_014",
+              "actor_id": "signal_014",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_015",
+              "actor_id": "signal_015",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_016",
+              "actor_id": "signal_016",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_017",
+              "actor_id": "signal_017",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_018",
+              "actor_id": "signal_018",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_019",
+              "actor_id": "signal_019",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_020",
+              "actor_id": "signal_020",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_021",
+              "actor_id": "signal_021",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_022",
+              "actor_id": "signal_022",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_023",
+              "actor_id": "signal_023",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_024",
+              "actor_id": "signal_024",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_025",
+              "actor_id": "signal_025",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_026",
+              "actor_id": "signal_026",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_027",
+              "actor_id": "signal_027",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_028",
+              "actor_id": "signal_028",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_029",
+              "actor_id": "signal_029",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_030",
+              "actor_id": "signal_030",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_031",
+              "actor_id": "signal_031",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_032",
+              "actor_id": "signal_032",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_033",
+              "actor_id": "signal_033",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_034",
+              "actor_id": "signal_034",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_035",
+              "actor_id": "signal_035",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_036",
+              "actor_id": "signal_036",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_037",
+              "actor_id": "signal_037",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_038",
+              "actor_id": "signal_038",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_039",
+              "actor_id": "signal_039",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_040",
+              "actor_id": "signal_040",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_041",
+              "actor_id": "signal_041",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_042",
+              "actor_id": "signal_042",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_043",
+              "actor_id": "signal_043",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_044",
+              "actor_id": "signal_044",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_045",
+              "actor_id": "signal_045",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_046",
+              "actor_id": "signal_046",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_047",
+              "actor_id": "signal_047",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_048",
+              "actor_id": "signal_048",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_049",
+              "actor_id": "signal_049",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_050",
+              "actor_id": "signal_050",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_051",
+              "actor_id": "signal_051",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_052",
+              "actor_id": "signal_052",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_053",
+              "actor_id": "signal_053",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_054",
+              "actor_id": "signal_054",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_055",
+              "actor_id": "signal_055",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_056",
+              "actor_id": "signal_056",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_057",
+              "actor_id": "signal_057",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_058",
+              "actor_id": "signal_058",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_059",
+              "actor_id": "signal_059",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_060",
+              "actor_id": "signal_060",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_061",
+              "actor_id": "signal_061",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_062",
+              "actor_id": "signal_062",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_063",
+              "actor_id": "signal_063",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_064",
+              "actor_id": "signal_064",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_065",
+              "actor_id": "signal_065",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_066",
+              "actor_id": "signal_066",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_067",
+              "actor_id": "signal_067",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_068",
+              "actor_id": "signal_068",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_069",
+              "actor_id": "signal_069",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_070",
+              "actor_id": "signal_070",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_071",
+              "actor_id": "signal_071",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_072",
+              "actor_id": "signal_072",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_073",
+              "actor_id": "signal_073",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_074",
+              "actor_id": "signal_074",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_075",
+              "actor_id": "signal_075",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_076",
+              "actor_id": "signal_076",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_077",
+              "actor_id": "signal_077",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_078",
+              "actor_id": "signal_078",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_079",
+              "actor_id": "signal_079",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_080",
+              "actor_id": "signal_080",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_081",
+              "actor_id": "signal_081",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_082",
+              "actor_id": "signal_082",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_083",
+              "actor_id": "signal_083",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_084",
+              "actor_id": "signal_084",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_085",
+              "actor_id": "signal_085",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_086",
+              "actor_id": "signal_086",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_087",
+              "actor_id": "signal_087",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_088",
+              "actor_id": "signal_088",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_089",
+              "actor_id": "signal_089",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_090",
+              "actor_id": "signal_090",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_091",
+              "actor_id": "signal_091",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_092",
+              "actor_id": "signal_092",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_093",
+              "actor_id": "signal_093",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_094",
+              "actor_id": "signal_094",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_095",
+              "actor_id": "signal_095",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_096",
+              "actor_id": "signal_096",
+              "style": "error",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_097",
+              "actor_id": "signal_097",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_098",
+              "actor_id": "signal_098",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_099",
+              "actor_id": "signal_099",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            },
+            {
+              "type": "circle",
+              "id": "signal_100",
+              "actor_id": "signal_100",
+              "style": "success",
+              "size_variant": "compact",
+              "continuity_mode": "position_only"
+            }
+          ]
+        }
+      ],
+      "animations": []
+    },
+    {
+      "id": "manual_triage",
       "duration": "7s",
       "template": "storyboard",
-      "narration": "Thousands of tests run. Hundreds of failures appear. The failure volume is overwhelming.",
+      "narration": "Every single dot has to move through manual triage before it can be bucketed.",
       "objects": [
-        {"type": "text", "id": "scale_heading", "content": "Thousands of tests. Hundreds of failures.", "style": "heading"},
+        {
+          "type": "connector",
+          "id": "triage_in",
+          "from": "triage_incoming",
+          "to": "manual_box"
+        },
+        {
+          "type": "connector",
+          "id": "triage_auto",
+          "from": "manual_box",
+          "to": "automation_frame"
+        },
+        {
+          "type": "connector",
+          "id": "triage_product",
+          "from": "manual_box",
+          "to": "product_frame"
+        },
         {
           "type": "group",
-          "id": "failure_field",
-          "grid": {"region": "stage"},
-          "layout": {"type": "grid", "columns": 5, "rows": 5, "gap": "small"},
-          "children": [
-            {"type": "circle", "id": "failure_01", "actor_id": "signal_01", "style": "error", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_02", "actor_id": "signal_02", "style": "error", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_03", "actor_id": "signal_03", "style": "error", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_04", "actor_id": "signal_04", "style": "error", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_05", "actor_id": "signal_05", "style": "error", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_06", "actor_id": "signal_06", "style": "error", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_07", "actor_id": "signal_07", "style": "error", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_08", "actor_id": "signal_08", "style": "error", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_09", "actor_id": "signal_09", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_10", "actor_id": "signal_10", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_11", "actor_id": "signal_11", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_12", "actor_id": "signal_12", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_13", "actor_id": "signal_13", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_14", "actor_id": "signal_14", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_15", "actor_id": "signal_15", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_16", "actor_id": "signal_16", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_17", "actor_id": "signal_17", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_18", "actor_id": "signal_18", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_19", "actor_id": "signal_19", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_20", "actor_id": "signal_20", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_21", "actor_id": "signal_21", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_22", "actor_id": "signal_22", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_23", "actor_id": "signal_23", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_24", "actor_id": "signal_24", "style": "muted", "size_variant": "compact"},
-            {"type": "circle", "id": "failure_25", "actor_id": "signal_25", "style": "muted", "size_variant": "compact"}
-          ]
-        }
-      ],
-      "animations": [
-        {"action": "fade-in", "target": "scale_heading", "at": "0s", "duration": "0.7s"},
-        {"action": "fade-in", "target": "failure_field", "at": "0.2s", "duration": "1s"}
-      ]
-    },
-    {
-      "id": "bottleneck",
-      "duration": "6s",
-      "template": "storyboard",
-      "narration": "Most failures are not product bugs. Humans are filtering noise through manual triage.",
-      "objects": [
-        {"type": "text", "id": "bottleneck_heading", "content": "Most failures are not product bugs", "style": "heading"},
-        {
-          "type": "group",
-          "id": "bottleneck_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+          "id": "triage_stage",
+          "grid": {
+            "row": 3,
+            "row_span": 9,
+            "col": 1,
+            "span": 12
+          },
+          "layout": {
+            "type": "stack",
+            "gap": "large",
+            "align": "center"
+          },
           "children": [
             {
               "type": "group",
-              "id": "bottleneck_cluster",
-              "layout": {"type": "grid", "columns": 3, "rows": 3, "gap": "small"},
+              "id": "triage_incoming",
+              "layout": {
+                "type": "grid",
+                "columns": 10,
+                "rows": 10,
+                "gap": "small"
+              },
               "children": [
-                {"type": "circle", "id": "b_01", "actor_id": "signal_01", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "b_02", "actor_id": "signal_02", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "b_03", "actor_id": "signal_03", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "b_04", "actor_id": "signal_04", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "b_05", "actor_id": "signal_05", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "b_06", "actor_id": "signal_06", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "b_07", "actor_id": "signal_07", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "b_08", "actor_id": "signal_08", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "b_09", "actor_id": "signal_09", "style": "error", "size_variant": "compact"}
+                {
+                  "type": "circle",
+                  "id": "signal_001",
+                  "actor_id": "signal_001",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_002",
+                  "actor_id": "signal_002",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_003",
+                  "actor_id": "signal_003",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_004",
+                  "actor_id": "signal_004",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_005",
+                  "actor_id": "signal_005",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_006",
+                  "actor_id": "signal_006",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_007",
+                  "actor_id": "signal_007",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_008",
+                  "actor_id": "signal_008",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_009",
+                  "actor_id": "signal_009",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_010",
+                  "actor_id": "signal_010",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_011",
+                  "actor_id": "signal_011",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_012",
+                  "actor_id": "signal_012",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_013",
+                  "actor_id": "signal_013",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_014",
+                  "actor_id": "signal_014",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_015",
+                  "actor_id": "signal_015",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_016",
+                  "actor_id": "signal_016",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_017",
+                  "actor_id": "signal_017",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_018",
+                  "actor_id": "signal_018",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_019",
+                  "actor_id": "signal_019",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_020",
+                  "actor_id": "signal_020",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_021",
+                  "actor_id": "signal_021",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_022",
+                  "actor_id": "signal_022",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_023",
+                  "actor_id": "signal_023",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_024",
+                  "actor_id": "signal_024",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_025",
+                  "actor_id": "signal_025",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_026",
+                  "actor_id": "signal_026",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_027",
+                  "actor_id": "signal_027",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_028",
+                  "actor_id": "signal_028",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_029",
+                  "actor_id": "signal_029",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_030",
+                  "actor_id": "signal_030",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_031",
+                  "actor_id": "signal_031",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_032",
+                  "actor_id": "signal_032",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_033",
+                  "actor_id": "signal_033",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_034",
+                  "actor_id": "signal_034",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_035",
+                  "actor_id": "signal_035",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_036",
+                  "actor_id": "signal_036",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_037",
+                  "actor_id": "signal_037",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_038",
+                  "actor_id": "signal_038",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_039",
+                  "actor_id": "signal_039",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_040",
+                  "actor_id": "signal_040",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_041",
+                  "actor_id": "signal_041",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_042",
+                  "actor_id": "signal_042",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_043",
+                  "actor_id": "signal_043",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_044",
+                  "actor_id": "signal_044",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_045",
+                  "actor_id": "signal_045",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_046",
+                  "actor_id": "signal_046",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_047",
+                  "actor_id": "signal_047",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_048",
+                  "actor_id": "signal_048",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_049",
+                  "actor_id": "signal_049",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_050",
+                  "actor_id": "signal_050",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_051",
+                  "actor_id": "signal_051",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_052",
+                  "actor_id": "signal_052",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_053",
+                  "actor_id": "signal_053",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_054",
+                  "actor_id": "signal_054",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_055",
+                  "actor_id": "signal_055",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_056",
+                  "actor_id": "signal_056",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_057",
+                  "actor_id": "signal_057",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_058",
+                  "actor_id": "signal_058",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_059",
+                  "actor_id": "signal_059",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_060",
+                  "actor_id": "signal_060",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_061",
+                  "actor_id": "signal_061",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_062",
+                  "actor_id": "signal_062",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_063",
+                  "actor_id": "signal_063",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_064",
+                  "actor_id": "signal_064",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_065",
+                  "actor_id": "signal_065",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_066",
+                  "actor_id": "signal_066",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_067",
+                  "actor_id": "signal_067",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_068",
+                  "actor_id": "signal_068",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_069",
+                  "actor_id": "signal_069",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_070",
+                  "actor_id": "signal_070",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_071",
+                  "actor_id": "signal_071",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_072",
+                  "actor_id": "signal_072",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_073",
+                  "actor_id": "signal_073",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_074",
+                  "actor_id": "signal_074",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_075",
+                  "actor_id": "signal_075",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_076",
+                  "actor_id": "signal_076",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_077",
+                  "actor_id": "signal_077",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_078",
+                  "actor_id": "signal_078",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_079",
+                  "actor_id": "signal_079",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_080",
+                  "actor_id": "signal_080",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_081",
+                  "actor_id": "signal_081",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_082",
+                  "actor_id": "signal_082",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_083",
+                  "actor_id": "signal_083",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_084",
+                  "actor_id": "signal_084",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_085",
+                  "actor_id": "signal_085",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_086",
+                  "actor_id": "signal_086",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_087",
+                  "actor_id": "signal_087",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_088",
+                  "actor_id": "signal_088",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_089",
+                  "actor_id": "signal_089",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_090",
+                  "actor_id": "signal_090",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_091",
+                  "actor_id": "signal_091",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_092",
+                  "actor_id": "signal_092",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_093",
+                  "actor_id": "signal_093",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_094",
+                  "actor_id": "signal_094",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_095",
+                  "actor_id": "signal_095",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_096",
+                  "actor_id": "signal_096",
+                  "style": "error",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_097",
+                  "actor_id": "signal_097",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_098",
+                  "actor_id": "signal_098",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_099",
+                  "actor_id": "signal_099",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                },
+                {
+                  "type": "circle",
+                  "id": "signal_100",
+                  "actor_id": "signal_100",
+                  "style": "success",
+                  "size_variant": "compact",
+                  "continuity_mode": "position_only"
+                }
               ]
             },
-            {"type": "box", "id": "manual_triage", "actor_id": "manual_triage", "content": "Manual Triage", "style": "muted", "size_variant": "hero"}
-          ]
-        }
-      ],
-      "animations": [
-        {"action": "fade-in", "target": "bottleneck_heading", "at": "0s", "duration": "0.7s"},
-        {"action": "fade-in", "target": "bottleneck_stage", "at": "0.2s", "duration": "0.8s"},
-        {"action": "highlight", "target": "manual_triage", "at": "1.1s", "duration": "1.2s", "color": "warning"}
-      ]
-    },
-    {
-      "id": "golden_rule",
-      "duration": "5s",
-      "template": "storyboard",
-      "narration": "A passing test that hides a product bug is worse than a failing test.",
-      "objects": [
-        {
-          "type": "group",
-          "id": "rule_panel",
-          "grid": {"region": "stage"},
-          "layout": {"type": "stack", "gap": "medium", "align": "center"},
-          "children": [
-            {"type": "text", "id": "rule_text", "content": "80% is noise", "style": "heading"}
-          ]
-        }
-      ],
-      "animations": [{"action": "fade-in", "target": "rule_panel", "at": "0s", "duration": "0.8s"}]
-    },
-    {
-      "id": "agent_intro",
-      "duration": "5s",
-      "template": "storyboard",
-      "narration": "Something new enters the system.",
-      "objects": [
-        {
-          "type": "group",
-          "id": "agent_intro_panel",
-          "grid": {"region": "stage"},
-          "layout": {"type": "stack", "gap": "large", "align": "center"},
-          "children": [
-            {"type": "circle", "id": "agent_intro_circle", "actor_id": "qa_copilot_agent", "content": "AI", "style": "success", "size_variant": "hero"},
-            {"type": "text", "id": "agent_intro_label", "content": "QA Copilot", "style": "heading"}
-          ]
-        }
-      ],
-      "animations": [{"action": "fade-in", "target": "agent_intro_panel", "at": "0s", "duration": "1s"}]
-    },
-    {
-      "id": "old_flow",
-      "duration": "6s",
-      "template": "storyboard",
-      "narration": "The old path is test runs, then failure, then manual triage.",
-      "objects": [
-        {"type": "connector", "id": "old_link_1", "from": "legacy_runs", "to": "legacy_failure"},
-        {"type": "connector", "id": "old_link_2", "from": "legacy_failure", "to": "legacy_manual"},
-        {
-          "type": "group",
-          "id": "old_flow_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
-          "children": [
-            {"type": "box", "id": "legacy_runs", "actor_id": "flow_runs", "content": "Test Runs", "style": "muted"},
-            {"type": "box", "id": "legacy_failure", "actor_id": "flow_failure", "content": "Failure", "style": "warning"},
-            {"type": "box", "id": "legacy_manual", "actor_id": "manual_triage", "content": "Manual Triage", "style": "muted"}
-          ]
-        }
-      ],
-      "animations": [
-        {"action": "fade-in", "target": "old_flow_stage", "at": "0.2s", "duration": "0.8s"},
-        {"action": "draw", "target": "old_link_1", "at": "0.7s", "duration": "0.6s"},
-        {"action": "draw", "target": "old_link_2", "at": "1.0s", "duration": "0.6s"}
-      ]
-    },
-    {
-      "id": "intercepted_flow",
-      "duration": "6s",
-      "template": "storyboard",
-      "narration": "QA Copilot intercepts the failure in real time, and the manual path falls away.",
-      "objects": [
-        {"type": "connector", "id": "new_link_1", "from": "new_runs", "to": "new_failure"},
-        {"type": "connector", "id": "new_link_2", "from": "new_agent", "to": "new_failure"},
-        {
-          "type": "group",
-          "id": "new_flow_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
-          "children": [
-            {"type": "box", "id": "new_runs", "actor_id": "flow_runs", "content": "Test Runs", "style": "muted"},
-            {"type": "box", "id": "new_failure", "actor_id": "flow_failure", "content": "Failure", "style": "warning"},
-            {"type": "circle", "id": "new_agent", "actor_id": "qa_copilot_agent", "content": "AI", "style": "success", "size_variant": "hero"},
-            {"type": "box", "id": "manual_offscreen", "actor_id": "manual_triage", "content": "Manual Triage", "style": "muted"}
-          ]
-        }
-      ],
-      "animations": [
-        {"action": "fade-in", "target": "new_flow_stage", "at": "0.2s", "duration": "0.8s"},
-        {"action": "draw", "target": "new_link_1", "at": "0.7s", "duration": "0.6s"},
-        {"action": "draw", "target": "new_link_2", "at": "1.0s", "duration": "0.6s"},
-        {"action": "fade-out", "target": "manual_offscreen", "at": "1.2s", "duration": "0.8s"}
-      ]
-    },
-    {
-      "id": "inspection",
-      "duration": "6s",
-      "template": "storyboard",
-      "narration": "It is not a parser. It is an investigator running directly on the system under test.",
-      "objects": [
-        {"type": "connector", "id": "inspect_logs_link", "from": "inspect_agent", "to": "inspect_logs"},
-        {"type": "connector", "id": "inspect_fs_link", "from": "inspect_agent", "to": "inspect_fs"},
-        {"type": "connector", "id": "inspect_gpu_link", "from": "inspect_agent", "to": "inspect_gpu"},
-        {
-          "type": "group",
-          "id": "inspect_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "stack", "gap": "large", "align": "center"},
-          "children": [
-            {"type": "circle", "id": "inspect_agent", "actor_id": "qa_copilot_agent", "content": "AI", "style": "success", "size_variant": "hero"},
             {
-              "type": "group",
-              "id": "inspect_targets",
-              "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
-              "children": [
-                {"type": "token", "id": "inspect_logs", "content": "Logs", "style": "muted"},
-                {"type": "token", "id": "inspect_fs", "content": "Filesystem", "style": "muted"},
-                {"type": "token", "id": "inspect_gpu", "content": "GPU State", "style": "muted"}
-              ]
-            }
-          ]
-        }
-      ],
-      "animations": [
-        {"action": "fade-in", "target": "inspect_stage", "at": "0.2s", "duration": "0.8s"},
-        {"action": "draw", "target": "inspect_logs_link", "at": "0.8s", "duration": "0.6s"},
-        {"action": "draw", "target": "inspect_fs_link", "at": "1.0s", "duration": "0.6s"},
-        {"action": "draw", "target": "inspect_gpu_link", "at": "1.2s", "duration": "0.6s"}
-      ]
-    },
-    {
-      "id": "decision_engine",
-      "duration": "6s",
-      "template": "storyboard",
-      "narration": "The agent classifies failures into product bugs, automation bugs, environment problems, or unknowns.",
-      "objects": [
-        {"type": "connector", "id": "decision_link_1", "from": "decision_source", "to": "decision_product"},
-        {"type": "connector", "id": "decision_link_2", "from": "decision_source", "to": "decision_automation"},
-        {"type": "connector", "id": "decision_link_3", "from": "decision_source", "to": "decision_environment"},
-        {"type": "connector", "id": "decision_link_4", "from": "decision_source", "to": "decision_unknown"},
-        {
-          "type": "group",
-          "id": "decision_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "stack", "gap": "large", "align": "center"},
-          "children": [
-            {"type": "box", "id": "decision_source", "content": "Classification", "style": "primary"},
-            {
-              "type": "group",
-              "id": "decision_targets",
-              "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
-              "children": [
-                {"type": "token", "id": "decision_product", "content": "Product Bug", "style": "error"},
-                {"type": "token", "id": "decision_automation", "content": "Automation Bug", "style": "success"},
-                {"type": "token", "id": "decision_environment", "content": "Environment", "style": "warning"},
-                {"type": "token", "id": "decision_unknown", "content": "Unknown", "style": "muted"}
-              ]
-            }
-          ]
-        }
-      ],
-      "animations": [
-        {"action": "fade-in", "target": "decision_stage", "at": "0.2s", "duration": "0.8s"},
-        {"action": "draw", "target": "decision_link_1", "at": "0.8s", "duration": "0.5s"},
-        {"action": "draw", "target": "decision_link_2", "at": "0.95s", "duration": "0.5s"},
-        {"action": "draw", "target": "decision_link_3", "at": "1.1s", "duration": "0.5s"},
-        {"action": "draw", "target": "decision_link_4", "at": "1.25s", "duration": "0.5s"}
-      ]
-    },
-    {
-      "id": "action_layer",
-      "duration": "6s",
-      "template": "storyboard",
-      "narration": "The agent does not stop at classification. Each branch has a concrete next action.",
-      "objects": [
-        {
-          "type": "group",
-          "id": "action_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "grid", "columns": 2, "rows": 2, "gap": "medium"},
-          "children": [
-            {"type": "box", "id": "action_product", "content": "Product Bug -> Fail + Evidence", "style": "error"},
-            {"type": "box", "id": "action_automation", "content": "Automation Bug -> Fix + Rerun", "style": "success"},
-            {"type": "box", "id": "action_environment", "content": "Environment -> Rerun", "style": "warning"},
-            {"type": "box", "id": "action_unknown", "content": "Unknown -> Escalate", "style": "muted"}
-          ]
-        }
-      ],
-      "animations": [{"action": "fade-in", "target": "action_stage", "at": "0.2s", "duration": "0.9s"}]
-    },
-    {
-      "id": "aggregation",
-      "duration": "6s",
-      "template": "storyboard",
-      "narration": "Across systems under test, failures regroup into stable root-cause clusters.",
-      "objects": [
-        {
-          "type": "group",
-          "id": "aggregation_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
-          "children": [
-            {
-              "type": "group",
-              "id": "aggregation_cloud",
-              "layout": {"type": "grid", "columns": 3, "rows": 3, "gap": "small"},
-              "children": [
-                {"type": "circle", "id": "agg_1", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "agg_2", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "agg_3", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "agg_4", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "agg_5", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "agg_6", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "agg_7", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "agg_8", "style": "error", "size_variant": "compact"},
-                {"type": "circle", "id": "agg_9", "style": "error", "size_variant": "compact"}
-              ]
+              "type": "box",
+              "id": "manual_box",
+              "actor_id": "manual_triage_box",
+              "content": "Manual Triage",
+              "style": "warning",
+              "size_variant": "hero"
             },
             {
               "type": "group",
-              "id": "aggregation_clusters",
-              "layout": {"type": "stack", "gap": "medium", "align": "center"},
+              "id": "triage_outputs",
+              "layout": {
+                "type": "flow",
+                "direction": "horizontal",
+                "gap": "large",
+                "align": "center"
+              },
               "children": [
-                {"type": "box", "id": "cluster_a", "content": "ERR-902 -> Automation", "style": "success"},
-                {"type": "box", "id": "cluster_b", "content": "ERR-415 -> Product Bug", "style": "success"},
-                {"type": "box", "id": "cluster_c", "content": "ERR-121 -> Environment", "style": "success"}
-              ]
-            }
-          ]
-        }
-      ],
-      "animations": [{"action": "fade-in", "target": "aggregation_stage", "at": "0.2s", "duration": "0.8s"}]
-    },
-    {
-      "id": "bug_filing",
-      "duration": "6s",
-      "template": "storyboard",
-      "narration": "Messy logs become a structured bug draft with evidence attached.",
-      "objects": [
-        {"type": "connector", "id": "bug_link", "from": "log_block", "to": "bug_draft"},
-        {
-          "type": "group",
-          "id": "bug_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
-          "children": [
-            {
-              "type": "group",
-              "id": "log_block",
-              "layout": {"type": "stack", "gap": "small", "align": "left"},
-              "children": [
-                {"type": "text", "id": "log_1", "content": "trace line 1", "style": "caption"},
-                {"type": "text", "id": "log_2", "content": "trace line 2", "style": "caption"},
-                {"type": "text", "id": "log_3", "content": "trace line 3", "style": "caption"}
-              ]
-            },
-            {
-              "type": "group",
-              "id": "bug_draft",
-              "layout": {"type": "stack", "gap": "small", "align": "left"},
-              "children": [
-                {"type": "box", "id": "bug_title", "content": "Create NVBug Draft", "style": "primary"},
-                {"type": "token", "id": "bug_owner", "content": "Owner: CQA", "style": "success"},
-                {"type": "token", "id": "bug_evidence", "content": "Evidence attached", "style": "accent"}
+                {
+                  "type": "box",
+                  "id": "automation_frame",
+                  "actor_id": "automation_bucket",
+                  "content": "Automation",
+                  "style": "dark",
+                  "size_variant": "hero"
+                },
+                {
+                  "type": "box",
+                  "id": "product_frame",
+                  "actor_id": "product_bucket",
+                  "content": "Product Issue",
+                  "style": "dark",
+                  "size_variant": "hero"
+                }
               ]
             }
           ]
         }
       ],
       "animations": [
-        {"action": "fade-in", "target": "bug_stage", "at": "0.2s", "duration": "0.8s"},
-        {"action": "draw", "target": "bug_link", "at": "0.9s", "duration": "0.7s"}
+        {
+          "action": "fade-in",
+          "target": "triage_stage",
+          "at": "0.2s",
+          "duration": "0.8s"
+        },
+        {
+          "action": "draw",
+          "target": "triage_in",
+          "at": "0.8s",
+          "duration": "0.6s"
+        },
+        {
+          "action": "draw",
+          "target": "triage_auto",
+          "at": "1.1s",
+          "duration": "0.6s"
+        },
+        {
+          "action": "draw",
+          "target": "triage_product",
+          "at": "1.3s",
+          "duration": "0.6s"
+        }
       ]
     },
     {
-      "id": "onboarding",
-      "duration": "5s",
+      "id": "bucketed_outcome",
+      "duration": "7s",
       "template": "storyboard",
-      "narration": "Setup stays simple. Engineers enable the flag and clone the repo. No framework changes are required.",
+      "narration": "After manual triage, the same one hundred failures finally get bucketed into automation and product issues.",
       "objects": [
         {
           "type": "group",
-          "id": "onboarding_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
-          "children": [
-            {"type": "box", "id": "onboarding_enable", "content": "Enable flag", "style": "accent"},
-            {"type": "box", "id": "onboarding_clone", "content": "Clone repo", "style": "accent"}
-          ]
-        }
-      ],
-      "animations": [{"action": "fade-in", "target": "onboarding_stage", "at": "0.2s", "duration": "0.8s"}]
-    },
-    {
-      "id": "impact",
-      "duration": "6s",
-      "template": "storyboard",
-      "narration": "Manual triage takes hours. QA Copilot turns that into seconds.",
-      "objects": [
-        {
-          "type": "group",
-          "id": "impact_stage",
-          "grid": {"region": "stage"},
-          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+          "id": "bucket_stage",
+          "grid": {
+            "row": 3,
+            "row_span": 9,
+            "col": 1,
+            "span": 12
+          },
+          "layout": {
+            "type": "stack",
+            "gap": "large",
+            "align": "center"
+          },
           "children": [
             {
-              "type": "group",
-              "id": "impact_before",
-              "layout": {"type": "stack", "gap": "small", "align": "center"},
-              "children": [
-                {"type": "text", "id": "impact_before_label", "content": "Manual triage", "style": "section-heading"},
-                {"type": "text", "id": "impact_before_metric", "content": "Hours", "style": "heading"}
-              ]
+              "type": "box",
+              "id": "manual_box_final",
+              "actor_id": "manual_triage_box",
+              "content": "Manual Triage",
+              "style": "warning",
+              "size_variant": "hero"
             },
             {
               "type": "group",
-              "id": "impact_after",
-              "layout": {"type": "stack", "gap": "small", "align": "center"},
+              "id": "bucket_groups",
+              "layout": {
+                "type": "flow",
+                "direction": "horizontal",
+                "gap": "large",
+                "align": "top"
+              },
               "children": [
-                {"type": "text", "id": "impact_after_label", "content": "QA Copilot", "style": "section-heading"},
-                {"type": "text", "id": "impact_after_metric", "content": "Seconds", "style": "heading"}
+                {
+                  "type": "group",
+                  "id": "automation_bucket_group",
+                  "actor_id": "automation_bucket",
+                  "layout": {
+                    "type": "stack",
+                    "gap": "medium",
+                    "align": "center"
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "automation_label",
+                      "content": "Automation \u00b7 70",
+                      "style": "section-heading"
+                    },
+                    {
+                      "type": "group",
+                      "id": "automation_grid",
+                      "layout": {
+                        "type": "grid",
+                        "columns": 10,
+                        "rows": 7,
+                        "gap": "small"
+                      },
+                      "children": [
+                        {
+                          "type": "circle",
+                          "id": "signal_001",
+                          "actor_id": "signal_001",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_003",
+                          "actor_id": "signal_003",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_004",
+                          "actor_id": "signal_004",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_006",
+                          "actor_id": "signal_006",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_008",
+                          "actor_id": "signal_008",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_010",
+                          "actor_id": "signal_010",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_011",
+                          "actor_id": "signal_011",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_013",
+                          "actor_id": "signal_013",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_015",
+                          "actor_id": "signal_015",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_016",
+                          "actor_id": "signal_016",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_017",
+                          "actor_id": "signal_017",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_019",
+                          "actor_id": "signal_019",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_020",
+                          "actor_id": "signal_020",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_022",
+                          "actor_id": "signal_022",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_025",
+                          "actor_id": "signal_025",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_026",
+                          "actor_id": "signal_026",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_027",
+                          "actor_id": "signal_027",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_029",
+                          "actor_id": "signal_029",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_030",
+                          "actor_id": "signal_030",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_032",
+                          "actor_id": "signal_032",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_034",
+                          "actor_id": "signal_034",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_035",
+                          "actor_id": "signal_035",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_037",
+                          "actor_id": "signal_037",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_038",
+                          "actor_id": "signal_038",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_040",
+                          "actor_id": "signal_040",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_042",
+                          "actor_id": "signal_042",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_043",
+                          "actor_id": "signal_043",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_045",
+                          "actor_id": "signal_045",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_046",
+                          "actor_id": "signal_046",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_047",
+                          "actor_id": "signal_047",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_049",
+                          "actor_id": "signal_049",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_050",
+                          "actor_id": "signal_050",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_051",
+                          "actor_id": "signal_051",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_053",
+                          "actor_id": "signal_053",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_054",
+                          "actor_id": "signal_054",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_056",
+                          "actor_id": "signal_056",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_057",
+                          "actor_id": "signal_057",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_058",
+                          "actor_id": "signal_058",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_060",
+                          "actor_id": "signal_060",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_061",
+                          "actor_id": "signal_061",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_062",
+                          "actor_id": "signal_062",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_064",
+                          "actor_id": "signal_064",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_065",
+                          "actor_id": "signal_065",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_067",
+                          "actor_id": "signal_067",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_068",
+                          "actor_id": "signal_068",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_069",
+                          "actor_id": "signal_069",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_070",
+                          "actor_id": "signal_070",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_072",
+                          "actor_id": "signal_072",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_073",
+                          "actor_id": "signal_073",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_075",
+                          "actor_id": "signal_075",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_076",
+                          "actor_id": "signal_076",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_077",
+                          "actor_id": "signal_077",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_079",
+                          "actor_id": "signal_079",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_080",
+                          "actor_id": "signal_080",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_081",
+                          "actor_id": "signal_081",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_083",
+                          "actor_id": "signal_083",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_084",
+                          "actor_id": "signal_084",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_085",
+                          "actor_id": "signal_085",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_086",
+                          "actor_id": "signal_086",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_088",
+                          "actor_id": "signal_088",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_089",
+                          "actor_id": "signal_089",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_090",
+                          "actor_id": "signal_090",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_092",
+                          "actor_id": "signal_092",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_093",
+                          "actor_id": "signal_093",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_094",
+                          "actor_id": "signal_094",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_095",
+                          "actor_id": "signal_095",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_097",
+                          "actor_id": "signal_097",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_098",
+                          "actor_id": "signal_098",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_099",
+                          "actor_id": "signal_099",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_100",
+                          "actor_id": "signal_100",
+                          "style": "success",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "group",
+                  "id": "product_bucket_group",
+                  "actor_id": "product_bucket",
+                  "layout": {
+                    "type": "stack",
+                    "gap": "medium",
+                    "align": "center"
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "product_label",
+                      "content": "Product Issue \u00b7 30",
+                      "style": "section-heading"
+                    },
+                    {
+                      "type": "group",
+                      "id": "product_grid",
+                      "layout": {
+                        "type": "grid",
+                        "columns": 6,
+                        "rows": 5,
+                        "gap": "small"
+                      },
+                      "children": [
+                        {
+                          "type": "circle",
+                          "id": "signal_002",
+                          "actor_id": "signal_002",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_005",
+                          "actor_id": "signal_005",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_007",
+                          "actor_id": "signal_007",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_009",
+                          "actor_id": "signal_009",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_012",
+                          "actor_id": "signal_012",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_014",
+                          "actor_id": "signal_014",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_018",
+                          "actor_id": "signal_018",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_021",
+                          "actor_id": "signal_021",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_023",
+                          "actor_id": "signal_023",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_024",
+                          "actor_id": "signal_024",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_028",
+                          "actor_id": "signal_028",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_031",
+                          "actor_id": "signal_031",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_033",
+                          "actor_id": "signal_033",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_036",
+                          "actor_id": "signal_036",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_039",
+                          "actor_id": "signal_039",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_041",
+                          "actor_id": "signal_041",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_044",
+                          "actor_id": "signal_044",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_048",
+                          "actor_id": "signal_048",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_052",
+                          "actor_id": "signal_052",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_055",
+                          "actor_id": "signal_055",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_059",
+                          "actor_id": "signal_059",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_063",
+                          "actor_id": "signal_063",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_066",
+                          "actor_id": "signal_066",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_071",
+                          "actor_id": "signal_071",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_074",
+                          "actor_id": "signal_074",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_078",
+                          "actor_id": "signal_078",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_082",
+                          "actor_id": "signal_082",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_087",
+                          "actor_id": "signal_087",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_091",
+                          "actor_id": "signal_091",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        },
+                        {
+                          "type": "circle",
+                          "id": "signal_096",
+                          "actor_id": "signal_096",
+                          "style": "error",
+                          "size_variant": "compact",
+                          "continuity_mode": "position_only"
+                        }
+                      ]
+                    }
+                  ]
+                }
               ]
             }
           ]
         }
       ],
-      "animations": [{"action": "fade-in", "target": "impact_stage", "at": "0.2s", "duration": "0.8s"}]
+      "animations": [
+        {
+          "action": "fade-in",
+          "target": "bucket_stage",
+          "at": "0.2s",
+          "duration": "0.8s"
+        }
+      ]
     },
     {
       "id": "final_statement",
       "duration": "5s",
       "template": "storyboard",
-      "narration": "QA Copilot brings autonomy into the test cycle.",
+      "narration": "That is the cost of doing this by hand.",
       "objects": [
         {
           "type": "group",
           "id": "final_panel",
-          "grid": {"region": "stage"},
-          "layout": {"type": "stack", "gap": "medium", "align": "center"},
+          "grid": {
+            "region": "stage"
+          },
+          "layout": {
+            "type": "stack",
+            "gap": "large",
+            "align": "center"
+          },
           "children": [
-            {"type": "text", "id": "final_title", "content": "QA Copilot", "style": "heading"},
-            {"type": "text", "id": "final_subtitle", "content": "Autonomy in the test cycle", "style": "caption"},
-            {"type": "text", "id": "final_footer", "content": "Built for CQA", "style": "caption"}
+            {
+              "type": "text",
+              "id": "final_big",
+              "content": "100 manual decisions",
+              "style": "heading"
+            },
+            {
+              "type": "text",
+              "id": "final_small",
+              "content": "70 automation \u00b7 30 product issues",
+              "style": "section-heading"
+            }
           ]
         }
       ],
-      "animations": [{"action": "fade-in", "target": "final_panel", "at": "0s", "duration": "1s"}]
+      "animations": [
+        {
+          "action": "fade-in",
+          "target": "final_panel",
+          "at": "0s",
+          "duration": "0.8s"
+        }
+      ]
     }
   ]
 }

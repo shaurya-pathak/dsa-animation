@@ -268,18 +268,14 @@ def test_qa_copilot_reference_example_covers_acceptance_storyboard_beats() -> No
 
     assert scene_ids >= {
         "title_card",
-        "scale_explosion",
-        "bottleneck",
-        "golden_rule",
-        "agent_intro",
-        "old_flow",
-        "intercepted_flow",
-        "inspection",
-        "decision_engine",
-        "action_layer",
-        "aggregation",
-        "bug_filing",
-        "onboarding",
-        "impact",
+        "signal_grid_gray",
+        "signal_grid_classified",
+        "manual_triage",
+        "bucketed_outcome",
         "final_statement",
     }
+    assert all(
+        animation.get("action") != "highlight"
+        for scene in raw["scenes"]
+        for animation in scene.get("animations", [])
+    )
