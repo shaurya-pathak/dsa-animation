@@ -33,6 +33,9 @@ def test_server_initialization_and_tool_call(tmp_path: Path) -> None:
     assert "persistent document-level objects" in instructions
     assert "assume the draft defaults" in instructions
     assert "resources/read" in instructions
+    assert "circle" in instructions
+    assert "pulse" in instructions
+    assert "radial" in instructions
 
     assert (
         server.handle_message(

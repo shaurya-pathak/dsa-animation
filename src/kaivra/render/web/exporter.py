@@ -454,6 +454,11 @@ function hexToRgba(hex, alpha) {{
   return `rgba(${{r}},${{g}},${{b}},${{alpha !== undefined ? alpha : 1}})`;
 }}
 
+function hexToRgbComponents(hex) {{
+  const h = hex.replace('#', '');
+  return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
+}}
+
 function roundedRect(ctx, x, y, w, h, r) {{
   r = Math.min(r, w/2, h/2);
   ctx.beginPath();
@@ -530,20 +535,38 @@ function resolveThemeColor(name) {{
 }}
 
 function drawHighlight(ctx, node) {{
-  const r = node.rect;
-  const intensity = (node._highlightIntensity || 0) * 0.3 * node._opacity;
+  const intensity = (node._highlightIntensity || 0) * node._opacity;
   if (intensity <= 0) return;
   const color = resolveThemeColor(node._highlightColor);
-  roundedRect(
-    ctx,
-    r.x - 4,
-    r.y - 4,
-    r.w + 8,
-    r.h + 8,
-    THEME.boxCornerRadius + 4,
-  );
-  ctx.fillStyle = hexToRgba(color, intensity);
-  ctx.fill();
+  const [hr, hg, hb] = hexToRgbComponents(color);
+
+  if (node.type === 'circle') {{
+    const r = node.rect;
+    const cx = r.x + r.w / 2;
+    const cy = r.y + r.h / 2;
+    const radius = Math.min(r.w, r.h) / 2;
+    const glowRadius = radius * 2.8;
+    const grad = ctx.createRadialGradient(cx, cy, radius * 0.8, cx, cy, glowRadius);
+    grad.addColorStop(0.0, `rgba(${{hr}},${{hg}},${{hb}},${{intensity * 0.55}})`);
+    grad.addColorStop(0.35, `rgba(${{hr}},${{hg}},${{hb}},${{intensity * 0.25}})`);
+    grad.addColorStop(1.0, `rgba(${{hr}},${{hg}},${{hb}},0)`);
+    ctx.beginPath();
+    ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }} else {{
+    const r = node.rect;
+    roundedRect(
+      ctx,
+      r.x - 4,
+      r.y - 4,
+      r.w + 8,
+      r.h + 8,
+      THEME.boxCornerRadius + 4,
+    );
+    ctx.fillStyle = hexToRgba(color, intensity * 0.3);
+    ctx.fill();
+  }}
 }}
 
 function drawNodeVisual(ctx, node, nodeMap) {{

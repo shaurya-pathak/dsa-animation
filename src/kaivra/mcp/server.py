@@ -185,6 +185,7 @@ class KaivraMCPServer:
                 "Keep connected nodes adjacent within groups so connectors don't cross unrelated nodes. "
                 "Available layout types: center, grid, flow, stack, split, carousel. "
                 "Use fade-in for reveals, draw for connectors. "
+                "Circle objects (type: circle) render with a circular radial glow halo when highlighted — use pulse with color: success/accent/error for emphasis. "
                 "Prefer persistent document-level objects whenever labels, chapter rails, or shared state carry across scenes. "
                 "Reuse the same object id and content across consecutive scenes for smooth continuity morphs. "
                 "Add a carousel chapter tracker as a persistent document-level object and highlight the active step each scene. "

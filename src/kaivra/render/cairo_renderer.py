@@ -473,6 +473,7 @@ class CairoRenderer:
         font_size = style.get("font_size", self.theme.font_size_body)
 
         fr, fg, fb, _ = hex_to_rgba(fill_color)
+        ctx.new_path()
         ctx.arc(cx, cy, radius, 0, 2 * math.pi)
         ctx.set_source_rgba(fr, fg, fb, node.opacity)
         ctx.fill_preserve()
@@ -505,13 +506,28 @@ class CairoRenderer:
         hex_color = self.theme.resolve_color(color)
         hr, hg, hb, _ = hex_to_rgba(hex_color)
 
-        r = node.rect
-        intensity = node.highlight_intensity * 0.3
-        ctx.set_source_rgba(hr, hg, hb, intensity * node.opacity)
-        self._rounded_rect(
-            ctx, r.x - 4, r.y - 4, r.width + 8, r.height + 8, self.theme.box_corner_radius + 4
-        )
-        ctx.fill()
+        intensity = node.highlight_intensity * node.opacity
+
+        if node.obj_type == ObjectType.CIRCLE:
+            # Circular radial gradient glow halo for circles
+            cx, cy = node.rect.center.x, node.rect.center.y
+            radius = min(node.rect.width, node.rect.height) / 2
+            glow_radius = radius * 2.8
+            pattern = cairo.RadialGradient(cx, cy, radius * 0.8, cx, cy, glow_radius)
+            pattern.add_color_stop_rgba(0.0, hr, hg, hb, intensity * 0.55)
+            pattern.add_color_stop_rgba(0.35, hr, hg, hb, intensity * 0.25)
+            pattern.add_color_stop_rgba(1.0, hr, hg, hb, 0.0)
+            ctx.new_path()
+            ctx.arc(cx, cy, glow_radius, 0, 2 * math.pi)
+            ctx.set_source(pattern)
+            ctx.fill()
+        else:
+            r = node.rect
+            ctx.set_source_rgba(hr, hg, hb, intensity * 0.3)
+            self._rounded_rect(
+                ctx, r.x - 4, r.y - 4, r.width + 8, r.height + 8, self.theme.box_corner_radius + 4
+            )
+            ctx.fill()
 
     def _draw_narration(
         self,
