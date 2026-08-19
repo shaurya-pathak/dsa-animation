@@ -49,7 +49,7 @@ def test_system_storyboard_pattern_supports_explicit_scene_kinds() -> None:
 def test_actor_id_continuity_moves_actor_when_local_ids_change() -> None:
     graph = _build_graph(
         {
-            "version": "1.4",
+            "version": "1.5",
             "meta": {"theme": "storyboard_dark", "show_subtitles": False, "continuity": True},
             "scenes": [
                 {
@@ -93,7 +93,7 @@ def test_actor_id_continuity_moves_actor_when_local_ids_change() -> None:
 def test_evolving_continuity_allows_moderate_copy_change() -> None:
     graph = _build_graph(
         {
-            "version": "1.4",
+            "version": "1.5",
             "meta": {"theme": "storyboard_dark", "show_subtitles": False, "continuity": True},
             "scenes": [
                 {
@@ -139,7 +139,7 @@ def test_evolving_continuity_allows_moderate_copy_change() -> None:
 def test_position_only_continuity_supports_dense_actor_copy_changes() -> None:
     graph = _build_graph(
         {
-            "version": "1.4",
+            "version": "1.5",
             "meta": {"theme": "storyboard_dark", "show_subtitles": False, "continuity": True},
             "scenes": [
                 {
@@ -197,7 +197,7 @@ def test_storyboard_stage_supports_a_dense_ten_by_ten_grid() -> None:
     ]
     graph = _build_graph(
         {
-            "version": "1.4",
+            "version": "1.5",
             "meta": {"theme": "storyboard_dark", "show_subtitles": False},
             "scenes": [
                 {

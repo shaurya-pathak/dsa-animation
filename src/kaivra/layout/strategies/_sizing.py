@@ -9,14 +9,54 @@ from __future__ import annotations
 from kaivra.dsl.schema import LayoutSpec, LayoutType, ObjectSpec, ObjectType
 from kaivra.themes.base import ThemeSpec
 from kaivra.utils.geometry import Size
+from kaivra.utils.typography import is_metric_style, metric_sign_slot_width, split_metric_sign
+
+# A conservative Inter/Arial-equivalent width for the all-caps labels that
+# dominate teaching diagrams. The old 0.62 estimate sized the shell from a
+# narrower lowercase average, so labels such as ``BORROW SUPPORT`` could draw
+# beyond the token even though semantic layout believed they fit.
+_ESTIMATED_GLYPH_WIDTH = 0.72
 
 
 def _variant_multiplier(obj: ObjectSpec) -> float:
+    """Match the font scale resolved by the scene-graph builder.
+
+    Boxes, tokens, text, and circles can all contain text. Their layout
+    footprint must therefore use the same variant scale as the renderer-facing
+    style, or compact labels are measured at 42% while rendered at 72%.
+    """
+    if obj.size_variant.value == "compact":
+        return 0.72
+    if obj.size_variant.value == "hero":
+        return 1.18
+    return 1.0
+
+
+def _portrait_variant_multiplier(obj: ObjectSpec) -> float:
+    """Keep illustration footprints independent from typography scaling."""
     if obj.size_variant.value == "compact":
         return 0.42
     if obj.size_variant.value == "hero":
         return 1.35
     return 1.0
+
+
+def _circle_variant_multiplier(obj: ObjectSpec) -> float:
+    """Let labeled actors fit text without enlarging unlabeled data marks."""
+    if obj.content:
+        return _variant_multiplier(obj)
+    return _portrait_variant_multiplier(obj)
+
+
+def _circle_size(obj: ObjectSpec, theme: ThemeSpec) -> Size:
+    variant = _circle_variant_multiplier(obj)
+    diameter = theme.box_min_height * variant
+    if obj.content:
+        style = theme.resolve_style(obj.style)
+        font_size = style.get("font_size", theme.font_size_body) * variant
+        text_width = len(obj.content) * font_size * _ESTIMATED_GLYPH_WIDTH
+        diameter = max(diameter, text_width + theme.box_padding * 2.5)
+    return Size(diameter, diameter)
 
 
 def estimate_object_size(obj: ObjectSpec, theme: ThemeSpec) -> Size:
@@ -33,8 +73,25 @@ def estimate_object_size(obj: ObjectSpec, theme: ThemeSpec) -> Size:
         case ObjectType.GROUP:
             return _group_size(obj, theme)
         case ObjectType.CIRCLE:
-            diameter = theme.box_min_height * _variant_multiplier(obj)
-            return Size(diameter, diameter)
+            return _circle_size(obj, theme)
+        case ObjectType.LINEAR_METER:
+            return _linear_meter_size(obj)
+        case ObjectType.SIGMOID_PLOT:
+            return _sigmoid_plot_size(obj)
+        case ObjectType.PET_PORTRAIT | ObjectType.PET:
+            # A pet is an illustration, not a text container. Keep its base
+            # square footprint stable across themes. Feature labels reserve
+            # real left/right gutters instead of leaking into neighbor space.
+            side = 220.0 * _portrait_variant_multiplier(obj)
+            if obj.show_feature_labels:
+                return Size(side * 1.9, side)
+            return Size(side, side)
+        case ObjectType.SEMANTIC_ICON:
+            # Icons carry visual meaning, so they get a genuinely legible
+            # footprint instead of being treated as decorative badges.
+            side = 160.0 * _portrait_variant_multiplier(obj)
+            caption_height = 28.0 * _variant_multiplier(obj) if obj.content else 0.0
+            return Size(side, side + caption_height)
         case ObjectType.CALLOUT:
             text = obj.content or ""
             width = min(300, max(len(text) * 9, 150))
@@ -45,13 +102,43 @@ def estimate_object_size(obj: ObjectSpec, theme: ThemeSpec) -> Size:
             return Size(theme.box_min_width, theme.box_min_height)
 
 
+def _linear_meter_size(obj: ObjectSpec) -> Size:
+    """Reserve a broad, label-safe footprint for a semantic teaching scale."""
+    if obj.size_variant.value == "compact":
+        return Size(300.0, 88.0)
+    if obj.size_variant.value == "hero":
+        return Size(720.0, 176.0)
+    return Size(540.0, 136.0)
+
+
+def _sigmoid_plot_size(obj: ObjectSpec) -> Size:
+    """Reserve enough room for axes, the S-curve, guides, and readable labels."""
+    if obj.size_variant.value == "compact":
+        return Size(300.0, 210.0)
+    if obj.size_variant.value == "hero":
+        return Size(520.0, 330.0)
+    return Size(420.0, 270.0)
+
+
 def _text_size(obj: ObjectSpec, theme: ThemeSpec) -> Size:
     style = theme.resolve_style(obj.style)
     font_size = style.get("font_size", theme.font_size_body) * _variant_multiplier(obj)
     text = obj.content or ""
-    # Rough estimate: ~0.6 * font_size per character width
-    char_width = font_size * 0.55
-    width = max(len(text) * char_width, theme.box_min_width)
+    _sign, text = split_metric_sign(text, obj.style)
+    # Inter's uppercase teaching labels are materially wider than the old
+    # 0.55 heuristic. A slightly conservative estimate prevents adjacent
+    # phrases from colliding and keeps shells around their full label.
+    char_width = font_size * _ESTIMATED_GLYPH_WIDTH
+    sign_slot = (
+        metric_sign_slot_width(
+            font_size,
+            sign_scale=theme.metric_sign_scale,
+            sign_gap=theme.metric_sign_gap,
+        )
+        if is_metric_style(obj.style)
+        else 0.0
+    )
+    width = max(len(text) * char_width + sign_slot, theme.box_min_width)
     height = font_size * 1.4
     return Size(width, height)
 
@@ -59,26 +146,27 @@ def _text_size(obj: ObjectSpec, theme: ThemeSpec) -> Size:
 def _box_size(obj: ObjectSpec, theme: ThemeSpec) -> Size:
     variant = _variant_multiplier(obj)
     text = obj.content or ""
-    char_width = theme.font_size_body * variant * 0.55
+    style = theme.resolve_style(obj.style)
+    font_size = style.get("font_size", theme.font_size_body) * variant
+    char_width = font_size * _ESTIMATED_GLYPH_WIDTH
     text_width = len(text) * char_width
     shadow_extra = theme.shadow_offset if theme.shadow else 0
     padding = theme.box_padding * (0.75 if obj.size_variant.value == "compact" else variant)
     width = max(text_width + padding * 2, theme.box_min_width * variant) + shadow_extra
-    height = (
-        max(theme.font_size_body * variant * 1.4 + padding * 2, theme.box_min_height * variant)
-        + shadow_extra
-    )
+    height = max(font_size * 1.4 + padding * 2, theme.box_min_height * variant) + shadow_extra
     return Size(width, height)
 
 
 def _token_size(obj: ObjectSpec, theme: ThemeSpec) -> Size:
     variant = _variant_multiplier(obj)
     text = obj.content or ""
-    char_width = theme.font_size_body * variant * 0.55
+    style = theme.resolve_style(obj.style)
+    font_size = style.get("font_size", theme.font_size_body) * variant
+    char_width = font_size * _ESTIMATED_GLYPH_WIDTH
     text_width = len(text) * char_width
     padding = theme.token_padding * (0.75 if obj.size_variant.value == "compact" else variant)
     width = text_width + padding * 2 + 8
-    height = theme.font_size_body * variant * 1.4 + padding * 2
+    height = font_size * 1.4 + padding * 2
     return Size(max(width, 50 * variant), height)
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 
@@ -51,6 +52,24 @@ _GROUP_VISIBILITY_ACTIONS = {
     AnimAction.FADE_OUT,
 }
 
+# A parent reveal is a useful shorthand for otherwise static descendants, but
+# it must not pre-empt a child's authored entrance. In particular, connectors
+# with a later ``draw`` used to flash on as soon as their parent focus stage
+# faded in. Treat actions that establish a child's own entrance as a boundary
+# for inherited group visibility.
+_EXPLICIT_REVEAL_ACTIONS = {
+    AnimAction.APPEAR,
+    AnimAction.FADE_IN,
+    AnimAction.TYPE,
+    AnimAction.DRAW,
+    AnimAction.FLOW,
+    AnimAction.SCALE,
+    AnimAction.MOVE,
+    AnimAction.MOVE_TO,
+    AnimAction.BUILD,
+    AnimAction.REPLACE,
+}
+
 _ONE_COLUMN_SEMANTIC_REGIONS = (
     "problem_solution",
     "request_pipeline",
@@ -75,6 +94,7 @@ def build_scene_graph(
     *,
     timing_config: TimingConfig | None = None,
     audio_timing_data: AudioTimingData | None = None,
+    fit_scene_durations_to_audio: bool = False,
 ) -> SceneGraph:
     """Convert a DocumentSpec into a fully resolved SceneGraph."""
     width, height = doc.meta.resolution
@@ -118,6 +138,7 @@ def build_scene_graph(
             glow_release_padding,
             timing_config=resolved_timing_config,
             scene_audio_timing=scene_audio_timing,
+            fit_scene_duration_to_audio=fit_scene_durations_to_audio,
         )
         # Continuity: inherit positions from previous scene for shared IDs
         continuity = (
@@ -170,6 +191,7 @@ def _build_scene(
     *,
     timing_config: TimingConfig,
     scene_audio_timing: SceneAudioTiming | None = None,
+    fit_scene_duration_to_audio: bool = False,
 ) -> ResolvedScene:
     # Apply scene template (if any)
     spec = _apply_scene_template(spec, persistent_ids)
@@ -265,6 +287,7 @@ def _build_scene(
         expanded_anims,
         timing_config=timing_config,
         scene_audio_timing=scene_audio_timing,
+        fit_scene_duration_to_audio=fit_scene_duration_to_audio,
     )
     timeline = _resolve_animations(
         expanded_anims,
@@ -273,6 +296,15 @@ def _build_scene(
         scene_audio_timing=scene_audio_timing,
     )
     timeline = _propagate_group_visibility(timeline, nodes)
+    if fit_scene_duration_to_audio and scene_audio_timing is not None:
+        # Voice renders are timed from measured audio, not an estimated reading
+        # rate or the authored silent-render fallback. Keep enough deterministic
+        # tail for any cue-triggered animation that genuinely finishes later.
+        timeline_end = max(
+            (keyframe.start_time + keyframe.duration for keyframe in timeline),
+            default=0.0,
+        )
+        duration = max(float(scene_audio_timing.duration_seconds), timeline_end)
     timeline = _normalize_timeline(timeline, duration, glow_release_padding)
 
     # Transition
@@ -583,7 +615,14 @@ def _continuity_delta(prev_node: SceneNode, node: SceneNode) -> tuple[float, flo
     """Return the positional delta for a continuity move, if motion should happen."""
     if node.obj_type == ObjectType.CONNECTOR:
         return None
-    return (prev_node.rect.x - node.rect.x, prev_node.rect.y - node.rect.y)
+    # Continuity follows the visual anchor, not the layout box's top-left
+    # corner. Semantic gutters (for labels, annotations, or signed values) can
+    # change a node's footprint while the actor itself remains the same size.
+    # Matching top-left corners makes that actor jump before its move begins.
+    return (
+        prev_node.rect.center.x - node.rect.center.x,
+        prev_node.rect.center.y - node.rect.center.y,
+    )
 
 
 def _residual_continuity_delta(
@@ -1064,6 +1103,7 @@ def _build_node(
         content=obj.content,
         style=obj.style,
         style_props=_resolve_object_style(theme, obj),
+        align_equals=getattr(obj, "align_equals", False),
         children=children,
         position=obj.position,
         label=obj.label,
@@ -1071,6 +1111,23 @@ def _build_node(
         from_id=from_id,
         to_id=obj.to_id,
         token_id=obj.token_id,
+        pet_kind=obj.pet_kind,
+        pet_highlights=list(obj.pet_highlights),
+        show_feature_labels=obj.show_feature_labels,
+        icon_name=obj.icon_name.value if obj.icon_name is not None else None,
+        meter_value=obj.meter_value,
+        base_meter_value=obj.meter_value,
+        meter_min=obj.meter_min,
+        meter_max=obj.meter_max,
+        meter_left_label=obj.meter_left_label,
+        meter_center_label=obj.meter_center_label,
+        meter_right_label=obj.meter_right_label,
+        meter_value_label=obj.meter_value_label,
+        meter_caption=obj.meter_caption,
+        sigmoid_input=obj.sigmoid_input,
+        sigmoid_input_label=obj.sigmoid_input_label,
+        sigmoid_output_label=obj.sigmoid_output_label,
+        sigmoid_caption=obj.sigmoid_caption,
         idle_preset=obj.idle.preset if obj.idle else None,
         idle_intensity=obj.idle.intensity if obj.idle else None,
         idle_speed=obj.idle.speed if obj.idle else None,
@@ -1117,7 +1174,10 @@ def _resolve_scene_duration(
     *,
     timing_config: TimingConfig,
     scene_audio_timing: SceneAudioTiming | None,
+    fit_scene_duration_to_audio: bool = False,
 ) -> float:
+    if fit_scene_duration_to_audio and scene_audio_timing is not None:
+        return float(scene_audio_timing.duration_seconds)
     if spec.duration != "auto":
         explicit_duration = resolve_duration_value(
             spec.duration,
@@ -1209,7 +1269,9 @@ def _resolve_animations(
                 duration=duration,
                 easing=anim.easing.value,
                 targets=targets if len(targets) > 1 else None,
-                to_value=anim.scale_factor,
+                to_value=(
+                    anim.meter_value if anim.action == AnimAction.METER_TO else anim.scale_factor
+                ),
                 from_value=anim.from_scale,
                 style=anim.style,
                 color=anim.color,
@@ -1276,9 +1338,10 @@ def _resolve_animation_start(
         ("cue", anim.cue),
     ]
     chosen = [name for name, value in selectors if value]
-    if len(chosen) > 1:
+    if len(chosen) > 1 and set(chosen) != {"at", "cue"}:
         raise ValueError(
-            f"Animation {anim.id or anim.action.value!r} uses multiple timing anchors {chosen}; choose one."
+            f"Animation {anim.id or anim.action.value!r} uses multiple timing anchors "
+            f"{chosen}; only `at` + `cue` may be combined."
         )
 
     gap = _resolve_optional_timing(
@@ -1286,6 +1349,13 @@ def _resolve_animation_start(
         timing_config=timing_config,
         field=f"animation {anim.id or anim.action.value} gap",
     )
+    if anim.cue and scene_audio_timing is not None and scene_audio_timing.cues:
+        cue = _find_matching_cue(
+            scene_audio_timing,
+            anim.cue,
+            field=f"animation {anim.id or anim.action.value} cue",
+        )
+        return cue.start_seconds + gap
     if anim.at:
         return resolve_duration_value(
             anim.at,
@@ -1349,16 +1419,62 @@ def _find_matching_cue(
     if not scene_audio_timing.cues:
         raise ValueError(f"{field} requires cue entries in the external audio timings sidecar.")
 
-    needle = _normalize_cue_text(cue_phrase)
-    for cue in scene_audio_timing.cues:
-        haystack = _normalize_cue_text(cue.text or "")
-        if needle and haystack and (needle in haystack or haystack in needle):
-            return cue
-    raise ValueError(f"{field} could not find a matching cue for {cue_phrase!r}.")
+    needle = _normalize_cue_tokens(cue_phrase)
+    if not needle:
+        raise ValueError(
+            f"{field} must include at least one spoken word after punctuation is removed."
+        )
+
+    match = _find_contiguous_cue_match(scene_audio_timing.cues, needle)
+    if match is not None:
+        return match
+
+    available = _available_cue_text(scene_audio_timing.cues)
+    raise ValueError(
+        f"{field} in scene {scene_audio_timing.id!r} could not match {cue_phrase!r} "
+        "as a contiguous, punctuation-normalized phrase in the supplied audio cues. "
+        f"Available cue text: {available}. Use the exact spoken phrase, or keep an authored "
+        "`at` value and render without timing cues for a silent fallback."
+    )
 
 
-def _normalize_cue_text(value: str) -> str:
-    return " ".join(value.lower().split())
+def _find_contiguous_cue_match(
+    cues: tuple[AudioCue, ...],
+    needle: tuple[str, ...],
+) -> AudioCue | None:
+    """Return the cue that owns the first token in an exact phrase match.
+
+    Native providers may return phrase-sized cues while fallback providers return
+    one cue per word. Flattening both into one chronological token stream lets a
+    single authored phrase work for either form without accepting loose substring
+    matches such as a repeated stopword elsewhere in the narration.
+    """
+    tokens: list[tuple[str, AudioCue]] = []
+    for cue in sorted(cues, key=lambda item: item.start_seconds):
+        tokens.extend((token, cue) for token in _normalize_cue_tokens(cue.text or ""))
+
+    phrase_length = len(needle)
+    for index in range(len(tokens) - phrase_length + 1):
+        if tuple(token for token, _cue in tokens[index : index + phrase_length]) == needle:
+            return tokens[index][1]
+    return None
+
+
+def _normalize_cue_tokens(value: str) -> tuple[str, ...]:
+    """Case-fold speech text and remove punctuation before exact token matching."""
+    normalized = re.sub(r"[\W_]+", " ", value.casefold(), flags=re.UNICODE)
+    return tuple(token for token in normalized.split() if token)
+
+
+def _available_cue_text(cues: tuple[AudioCue, ...]) -> str:
+    normalized = [" ".join(_normalize_cue_tokens(cue.text or "")) for cue in cues]
+    nonempty = [text for text in normalized if text]
+    if not nonempty:
+        return "<cue entries did not include text>"
+    summary = "; ".join(nonempty[:4])
+    if len(nonempty) > 4:
+        summary += f"; … ({len(nonempty) - 4} more)"
+    return summary
 
 
 def _propagate_group_visibility(
@@ -1370,7 +1486,7 @@ def _propagate_group_visibility(
     for child_id, parent_id in parent_map.items():
         child_map.setdefault(parent_id, []).append(child_id)
 
-    own_visibility_ids = {kf.target_id for kf in timeline if kf.action in _GROUP_VISIBILITY_ACTIONS}
+    explicit_reveal_ids = {kf.target_id for kf in timeline if kf.action in _EXPLICIT_REVEAL_ACTIONS}
     inherited: list[AnimationKeyframe] = []
     seen: set[tuple[str, AnimAction, float, float, str]] = set()
 
@@ -1380,7 +1496,7 @@ def _propagate_group_visibility(
         descendants = _descendant_ids(
             kf.target_id,
             child_map,
-            stop_ids=own_visibility_ids - {kf.target_id},
+            stop_ids=explicit_reveal_ids - {kf.target_id},
         )
         if not descendants:
             continue
@@ -1624,9 +1740,16 @@ def _compute_grid_positions(
         size = estimate_object_size(obj, theme)
         w = min(size.width, region_w)
         h = min(size.height, region_h)
-        x = region_x + (region_w - w) / 2
+        if region is not None and region.align == "left":
+            x = region_x
+        elif region is not None and region.align == "right":
+            x = region_x + region_w - w
+        else:
+            x = region_x + (region_w - w) / 2
         if region is not None and region.align == "top":
             y = region_y
+        elif region is not None and region.align == "bottom":
+            y = region_y + region_h - h
         else:
             y = region_y + (region_h - h) / 2
 
@@ -1725,6 +1848,8 @@ def _apply_scene_template(spec: SceneSpec, persistent_ids: set[str] | None) -> S
         )
     elif template == "one-column":
         layout = _build_one_column_template_layout()
+    elif template == "editorial":
+        layout = _build_editorial_template_layout()
     elif template == "storyboard":
         layout = _build_storyboard_template_layout()
     else:
@@ -1733,7 +1858,7 @@ def _apply_scene_template(spec: SceneSpec, persistent_ids: set[str] | None) -> S
     persistent_ids = persistent_ids or set()
 
     def is_title(obj: ObjectSpec) -> bool:
-        return obj.style in {"heading", "section-heading"}
+        return obj.style in {"hero-heading", "heading", "section-heading"}
 
     one_column_uses_semantic_regions = template == "one-column" and any(
         obj.grid and obj.grid.region in _ONE_COLUMN_SEMANTIC_REGIONS for obj in spec.objects
@@ -1800,6 +1925,24 @@ def _build_one_column_template_layout() -> LayoutSpec:
             "fan_out": {"row": 6, "row_span": 2, "col": 1, "span": 12, "align": "top"},
             "system_architecture": {"row": 8, "row_span": 3, "col": 1, "span": 12, "align": "top"},
             "timeline_steps": {"row": 11, "row_span": 2, "col": 1, "span": 12, "align": "top"},
+        },
+    )
+
+
+def _build_editorial_template_layout() -> LayoutSpec:
+    """Return a sparse full-canvas composition for one visual argument."""
+    return LayoutSpec(
+        type=LayoutType.GRID,
+        columns=12,
+        rows=12,
+        gap="small",
+        regions={
+            "header": {"row": 1, "row_span": 4, "col": 1, "span": 8, "align": "left"},
+            "headline": {"row": 1, "row_span": 4, "col": 1, "span": 8, "align": "left"},
+            "inputs": {"row": 5, "row_span": 6, "col": 1, "span": 3, "align": "left"},
+            "stage": {"row": 5, "row_span": 6, "col": 4, "span": 5, "align": "center"},
+            "result": {"row": 5, "row_span": 6, "col": 9, "span": 4, "align": "right"},
+            "annotation": {"row": 11, "row_span": 2, "col": 3, "span": 7, "align": "center"},
         },
     )
 

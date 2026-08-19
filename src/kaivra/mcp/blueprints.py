@@ -10,16 +10,16 @@ from typing import Any
 
 from kaivra.dsl.pacing import PacingProfile, format_duration, get_pacing_profile
 from kaivra.dsl.parser import parse_string
-from kaivra.dsl.schema import DocumentSpec, PacingPreset
+from kaivra.dsl.schema import DocumentSpec, PacingPreset, parse_duration
 
 DEFAULT_PATTERN = "algorithm_walkthrough"
-DEFAULT_NARRATED_PATTERN = "visual_explainer"
+DEFAULT_NARRATED_PATTERN = "motion_explainer"
 SUPPORTED_PATTERNS = (
     "algorithm_walkthrough",
     "architecture_explainer",
     "before_after_comparison",
+    "motion_explainer",
     "system_storyboard",
-    "visual_explainer",
 )
 SUPPORTED_STORYBOARD_SCENE_KINDS = {
     "title",
@@ -34,7 +34,7 @@ SUPPORTED_STORYBOARD_SCENE_KINDS = {
     "principle",
     "summary",
 }
-DEFAULT_THEME = "modern"
+DEFAULT_THEME = "editorial"
 
 
 @dataclass(frozen=True)
@@ -92,9 +92,8 @@ def build_starter_document(
             "pacing": pacing_profile.preset.value,
             "continuity": True,
             "continuity_duration": pacing_profile.continuity_duration,
-            "glow_release_padding": pacing_profile.glow_release_padding,
         },
-        "objects": _build_step_footer(parsed_beats),
+        "objects": [],
         "scenes": _build_scenes(
             title=title,
             pattern=chosen_pattern,
@@ -127,7 +126,7 @@ def _default_pattern(include_narration: bool) -> str:
 
 def _normalize_pattern(pattern: str, include_narration: bool) -> str:
     chosen_pattern = pattern.strip()
-    if chosen_pattern == "process_explainer":
+    if chosen_pattern in {"process_explainer", "visual_explainer"}:
         return DEFAULT_NARRATED_PATTERN if include_narration else DEFAULT_PATTERN
     return chosen_pattern
 
@@ -201,32 +200,6 @@ def _split_beat_text(text: str) -> tuple[str, str]:
     return _truncate(cleaned, 32), cleaned
 
 
-def _build_step_footer(beats: list[Beat]) -> list[dict[str, Any]]:
-    if len(beats) <= 1:
-        return []
-
-    return [
-        {
-            "type": "group",
-            "id": "steps",
-            "position": "bottom",
-            "layout": {
-                "type": "carousel",
-                "gap": "large",
-                "curve": 12,
-            },
-            "children": [
-                {
-                    "type": "token",
-                    "id": f"step_{beat.index + 1}",
-                    "content": beat.label,
-                }
-                for beat in beats
-            ],
-        }
-    ]
-
-
 def _build_scenes(
     *,
     title: str,
@@ -268,17 +241,14 @@ def _build_scenes(
             include_narration=include_narration,
             pacing_profile=pacing_profile,
         )
-    if pattern == "visual_explainer":
+    if pattern == "motion_explainer":
         return [
-            _build_visual_scene(
+            _build_motion_explainer_scene(
                 animation_title=title,
-                beat=beat,
                 beats=beats,
-                audience=audience,
                 include_narration=include_narration,
                 pacing_profile=pacing_profile,
             )
-            for beat in beats
         ]
     if pattern == "system_storyboard":
         return [
@@ -295,285 +265,115 @@ def _build_scenes(
     raise ValueError(f"Unsupported pattern {pattern!r}.")
 
 
-def _build_process_scene(
+def _build_motion_explainer_scene(
     *,
     animation_title: str,
-    beat: Beat,
     beats: list[Beat],
-    audience: str | None,
     include_narration: bool,
     pacing_profile: PacingProfile,
 ) -> dict[str, Any]:
-    scene_id = beat.slug
-    title_id = "process_heading"
-    focus_id = "process_focus_card"
-    stage_id = "process_stage_badge"
-    context_id = "process_context_token"
-    outcome_id = "process_outcome_token"
-    connector_ids = ["process_context_link", "process_outcome_link"]
-    duration = _scene_duration(beat, pacing_profile)
-
-    lane_children = [
-        {
-            "type": "token",
-            "id": context_id,
-            "content": _neighbor_title(beats, beat.index, -1, fallback="Context"),
-        },
-        {
-            "type": "box",
-            "id": focus_id,
-            "content": _truncate(beat.title, 24),
-            "style": "primary",
-        },
-        {
-            "type": "token",
-            "id": outcome_id,
-            "content": _neighbor_title(beats, beat.index, 1, fallback="Outcome"),
-        },
-    ]
-
-    panel_children: list[dict[str, Any]] = [
-        {
-            "type": "token",
-            "id": stage_id,
-            "content": beat.label,
-        },
-        {
-            "type": "group",
-            "id": "process_lane",
-            "layout": {
-                "type": "flow",
-                "direction": "horizontal",
-                "gap": "large",
-                "align": "center",
-            },
-            "children": lane_children,
-        },
-    ]
-    if not include_narration:
-        panel_children.append(
-            _text_stack(
-                group_id=f"{scene_id}_detail",
-                lines=_wrap_lines(beat.detail, width=34, max_lines=3),
-                style="body",
-            )
-        )
+    """Build one continuous animated path instead of one composed slide per beat."""
+    duration_seconds = sum(parse_duration(_scene_duration(beat, pacing_profile)) for beat in beats)
+    duration = format_duration(duration_seconds)
+    node_ids = [f"motion_beat_{beat.index + 1}" for beat in beats]
+    connector_ids = [f"motion_link_{index + 1}" for index in range(len(beats) - 1)]
+    styles = ("dark", "gold", "coral", "cyan")
 
     objects: list[dict[str, Any]] = [
         {
-            "type": "text",
-            "id": title_id,
-            "content": _truncate(beat.title, 26),
-            "style": "heading",
-        },
-        *_connectors(
-            ("process_context_link", context_id, focus_id),
-            ("process_outcome_link", focus_id, outcome_id),
-        ),
-        {
             "type": "group",
-            "id": "process_panel",
-            "layout": {
-                "type": "stack",
-                "gap": "large",
-                "align": "center",
-            },
-            "children": panel_children,
-        },
-    ]
-    caption = _caption_group(
-        scene_id=scene_id, audience=audience, include_narration=include_narration
-    )
-    if caption is not None:
-        objects.append(caption)
-
-    extra_animations = _connector_draw_animations(
-        connector_ids, pacing_profile=pacing_profile, start=0.15
-    )
-    extra_animations.append(
-        {
-            "action": "pulse",
-            "target": outcome_id,
-            "at": format_duration(0.5 + pacing_profile.continuity_seconds),
-            "duration": pacing_profile.highlight_duration,
-            "color": "accent",
-        }
-    )
-
-    return {
-        "id": scene_id,
-        "duration": duration,
-        "template": "one-column",
-        "layout": {"type": "stack", "gap": "large", "align": "center"},
-        "narration": _scene_narration(animation_title, beat, audience, include_narration),
-        "focus": focus_id,
-        "focus_style": {
-            "at": "0.45s",
-            "duration": pacing_profile.focus_duration,
-            "scale": 1.08,
-            "color": "accent",
-        },
-        "objects": objects,
-        "animations": _step_animations(
-            beat=beat,
-            duration=duration,
-            target_id=focus_id,
-            pacing_profile=pacing_profile,
-            step_target_id=_step_target_id(beats, beat),
-            reveal_target_ids=_reveal_object_ids(objects) if include_narration else None,
-            extra_animations=extra_animations,
-        ),
-        "auto_visible": not include_narration,
-    }
-
-
-def _build_visual_scene(
-    *,
-    animation_title: str,
-    beat: Beat,
-    beats: list[Beat],
-    audience: str | None,
-    include_narration: bool,
-    pacing_profile: PacingProfile,
-) -> dict[str, Any]:
-    scene_id = beat.slug
-    focus_id = "visual_focus_card"
-    source_id = "visual_source_token"
-    result_id = "visual_result_token"
-    connector_ids = ["visual_source_link", "visual_result_link"]
-    duration = _scene_duration(beat, pacing_profile)
-
-    panel_children: list[dict[str, Any]] = [
-        {
-            "type": "token",
-            "id": "visual_stage_badge",
-            "content": beat.label,
-        },
-        {
-            "type": "group",
-            "id": "visual_lane",
+            "id": "motion_world",
             "layout": {
                 "type": "flow",
                 "direction": "horizontal",
                 "gap": "large",
                 "align": "center",
             },
+            "visible": True,
             "children": [
-                _labelled_group(
-                    "visual_source_group",
-                    _truncate(beat.detail, 16) if beat.detail else "Context",
-                    {
-                        "type": "token",
-                        "id": source_id,
-                        "content": _neighbor_title(
-                            beats, beat.index, -1, fallback=_truncate(animation_title, 18)
-                        ),
-                    },
-                ),
-                _labelled_group(
-                    "visual_focus_group",
-                    _truncate(beat.title, 16),
-                    {
-                        "type": "box",
-                        "id": focus_id,
-                        "content": _truncate(beat.title, 24),
-                        "style": "accent",
-                    },
-                ),
-                _labelled_group(
-                    "visual_result_group",
-                    _neighbor_title(beats, beat.index, 1, fallback="Outcome"),
-                    {
-                        "type": "token",
-                        "id": result_id,
-                        "content": _neighbor_title(beats, beat.index, 1, fallback="Takeaway"),
-                    },
-                ),
+                {
+                    "type": "circle",
+                    "id": node_id,
+                    "actor_id": node_id,
+                    "content": _truncate(beat.title, 18),
+                    "style": styles[beat.index % len(styles)],
+                    "size_variant": "hero",
+                    "visible": not include_narration,
+                }
+                for beat, node_id in zip(beats, node_ids, strict=True)
             ],
         },
+        *_connectors(
+            *(
+                (connector_id, node_ids[index], node_ids[index + 1])
+                for index, connector_id in enumerate(connector_ids)
+            )
+        ),
     ]
-    if not include_narration:
-        panel_children.append(
-            _text_stack(
-                group_id=f"{scene_id}_detail",
-                lines=_wrap_lines(beat.detail, width=34, max_lines=3),
-                style="body",
+
+    animations: list[dict[str, Any]] = []
+    if include_narration:
+        animations.append(
+            {
+                "id": "reveal_motion_beat_1",
+                "action": "fade-in",
+                "target": node_ids[0],
+                "at": "0.8s",
+                "duration": pacing_profile.scale_duration,
+            }
+        )
+
+    cursor = max(2.0, duration_seconds / max(2, len(beats) * 1.6))
+    for index, connector_id in enumerate(connector_ids):
+        draw_id = f"draw_{connector_id}"
+        flow_id = f"flow_{connector_id}"
+        reveal_id = f"reveal_motion_beat_{index + 2}"
+        animations.extend(
+            [
+                {
+                    "id": draw_id,
+                    "action": "draw",
+                    "target": connector_id,
+                    "at": format_duration(cursor),
+                    "duration": pacing_profile.continuity_duration,
+                },
+                {
+                    "id": flow_id,
+                    "action": "flow",
+                    "target": connector_id,
+                    "after": draw_id,
+                    "duration": pacing_profile.continuity_duration,
+                },
+            ]
+        )
+        if include_narration:
+            animations.append(
+                {
+                    "id": reveal_id,
+                    "action": "fade-in",
+                    "target": node_ids[index + 1],
+                    "after": flow_id,
+                    "duration": pacing_profile.scale_duration,
+                }
+            )
+        cursor += max(2.0, duration_seconds / max(2, len(beats)))
+
+    narration = None
+    if include_narration:
+        narration = " ".join(
+            filter(
+                None,
+                (_scene_narration(animation_title, beat, None, True) for beat in beats),
             )
         )
 
-    objects: list[dict[str, Any]] = [
-        {
-            "type": "text",
-            "id": "visual_heading",
-            "content": _truncate(beat.title, 26),
-            "style": "heading",
-        },
-        *_connectors(
-            ("visual_source_link", source_id, focus_id),
-            ("visual_result_link", focus_id, result_id),
-        ),
-        {
-            "type": "group",
-            "id": "visual_panel",
-            "layout": {
-                "type": "stack",
-                "gap": "large",
-                "align": "center",
-            },
-            "children": panel_children,
-        },
-    ]
-    caption = _caption_group(
-        scene_id=scene_id, audience=audience, include_narration=include_narration
-    )
-    if caption is not None:
-        objects.append(caption)
-
-    extra_animations = _connector_draw_animations(
-        connector_ids, pacing_profile=pacing_profile, start=0.2
-    )
-    extra_animations.extend(
-        [
-            {
-                "action": "pulse",
-                "target": source_id,
-                "at": "0.2s",
-                "duration": pacing_profile.highlight_duration,
-                "color": "accent",
-            },
-            {
-                "action": "pulse",
-                "target": result_id,
-                "at": format_duration(0.8 + pacing_profile.continuity_seconds),
-                "duration": pacing_profile.highlight_duration,
-                "color": "success",
-            },
-        ]
-    )
-
     return {
-        "id": scene_id,
+        "id": "continuous_motion",
         "duration": duration,
-        "template": "one-column",
-        "layout": {"type": "stack", "gap": "large", "align": "center"},
-        "narration": _scene_narration(animation_title, beat, audience, include_narration),
-        "focus": focus_id,
-        "focus_style": {
-            "at": "0.45s",
-            "duration": pacing_profile.focus_duration,
-            "scale": 1.1,
-            "color": "accent",
-        },
+        "layout": {"type": "center"},
+        "narration": narration,
         "objects": objects,
-        "animations": _step_animations(
-            beat=beat,
-            duration=duration,
-            target_id=focus_id,
-            pacing_profile=pacing_profile,
-            step_target_id=_step_target_id(beats, beat),
-            reveal_target_ids=_reveal_object_ids(objects) if include_narration else None,
-            extra_animations=extra_animations,
-        ),
+        "animations": animations,
         "auto_visible": not include_narration,
     }
 
@@ -590,10 +390,7 @@ def _build_system_storyboard_scene(
     scene_kind = _storyboard_scene_kind(beats, beat)
     scene_id = beat.slug
     duration = _scene_duration(beat, pacing_profile)
-    step_target_id = _step_target_id(beats, beat)
-
     if scene_kind in {"title", "principle", "summary"}:
-        stage_id = "storyboard_principle_panel"
         objects = _storyboard_reset_objects(
             animation_title=animation_title,
             beat=beat,
@@ -606,18 +403,14 @@ def _build_system_storyboard_scene(
             "narration": _scene_narration(animation_title, beat, audience, include_narration),
             "objects": objects,
             "animations": _step_animations(
-                beat=beat,
                 duration=duration,
-                target_id=stage_id,
                 pacing_profile=pacing_profile,
-                step_target_id=step_target_id,
-                highlight_color="accent" if scene_kind != "summary" else "success",
                 reveal_target_ids=_reveal_object_ids(objects) if include_narration else None,
             ),
             "auto_visible": not include_narration,
         }
 
-    objects, connector_ids, focus_id, highlight_color = _storyboard_scene_payload(
+    objects, connector_ids, _focus_id, _highlight_color = _storyboard_scene_payload(
         animation_title=animation_title,
         beat=beat,
         beats=beats,
@@ -641,21 +434,10 @@ def _build_system_storyboard_scene(
         "duration": duration,
         "template": "storyboard",
         "narration": _scene_narration(animation_title, beat, audience, include_narration),
-        "focus": focus_id,
-        "focus_style": {
-            "at": "0.45s",
-            "duration": pacing_profile.focus_duration,
-            "scale": 1.08,
-            "color": highlight_color,
-        },
         "objects": objects,
         "animations": _step_animations(
-            beat=beat,
             duration=duration,
-            target_id=focus_id,
             pacing_profile=pacing_profile,
-            step_target_id=step_target_id,
-            highlight_color=highlight_color,
             reveal_target_ids=_reveal_object_ids(objects) if include_narration else None,
             extra_animations=extra_animations,
         ),
@@ -1299,15 +1081,6 @@ def _build_algorithm_scene(
     extra_animations = _connector_draw_animations(
         connector_ids, pacing_profile=pacing_profile, start=0.15
     )
-    extra_animations.append(
-        {
-            "action": "pulse",
-            "target": "algorithm_next_card",
-            "at": format_duration(0.6 + pacing_profile.continuity_seconds),
-            "duration": pacing_profile.highlight_duration,
-            "color": "accent",
-        }
-    )
 
     return {
         "id": scene_id,
@@ -1315,20 +1088,10 @@ def _build_algorithm_scene(
         "template": "one-column",
         "layout": {"type": "stack", "gap": "large", "align": "center"},
         "narration": _scene_narration(animation_title, beat, audience, include_narration),
-        "focus": current_card_id,
-        "focus_style": {
-            "at": "0.45s",
-            "duration": pacing_profile.focus_duration,
-            "scale": 1.1,
-            "color": "accent",
-        },
         "objects": objects,
         "animations": _step_animations(
-            beat=beat,
             duration=duration,
-            target_id=current_card_id,
             pacing_profile=pacing_profile,
-            step_target_id=_step_target_id(beats, beat),
             reveal_target_ids=_reveal_object_ids(objects) if include_narration else None,
             extra_animations=extra_animations,
         ),
@@ -1457,35 +1220,16 @@ def _build_architecture_scene(
     extra_animations = _connector_draw_animations(
         connector_ids, pacing_profile=pacing_profile, start=0.2
     )
-    extra_animations.append(
-        {
-            "action": "pulse",
-            "target": "architecture_sink_card",
-            "at": format_duration(0.75 + pacing_profile.continuity_seconds),
-            "duration": pacing_profile.highlight_duration,
-            "color": "success",
-        }
-    )
 
     return {
         "id": scene_id,
         "duration": duration,
         "template": "two-column",
         "narration": _scene_narration(animation_title, beat, audience, include_narration),
-        "focus": focus_id,
-        "focus_style": {
-            "at": "0.5s",
-            "duration": pacing_profile.focus_duration,
-            "scale": 1.08,
-            "color": "accent",
-        },
         "objects": objects,
         "animations": _step_animations(
-            beat=beat,
             duration=duration,
-            target_id=focus_id,
             pacing_profile=pacing_profile,
-            step_target_id=_step_target_id(beats, beat),
             reveal_target_ids=_reveal_object_ids(objects) if include_narration else None,
             extra_animations=extra_animations,
         ),
@@ -1510,7 +1254,6 @@ def _build_comparison_scenes(
                 audience=audience,
                 include_narration=include_narration,
                 pacing_profile=pacing_profile,
-                step_target_id=None,
             )
         ]
 
@@ -1524,7 +1267,6 @@ def _build_comparison_scenes(
                 audience=audience,
                 include_narration=include_narration,
                 pacing_profile=pacing_profile,
-                step_target_id=_step_target_id(beats, beats[index]),
             )
         )
     return scenes
@@ -1538,7 +1280,6 @@ def _build_comparison_scene(
     audience: str | None,
     include_narration: bool,
     pacing_profile: PacingProfile,
-    step_target_id: str | None,
 ) -> dict[str, Any]:
     scene_id = beat.slug
     after_card_id = "comparison_after_card"
@@ -1642,36 +1383,16 @@ def _build_comparison_scene(
         pacing_profile=pacing_profile,
         start=0.2,
     )
-    extra_animations.append(
-        {
-            "action": "pulse",
-            "target": "comparison_after_status",
-            "at": format_duration(0.5 + pacing_profile.continuity_seconds),
-            "duration": pacing_profile.highlight_duration,
-            "color": "success",
-        }
-    )
 
     return {
         "id": scene_id,
         "duration": duration,
         "template": "two-column",
         "narration": _scene_narration(animation_title, beat, audience, include_narration),
-        "focus": after_card_id,
-        "focus_style": {
-            "at": "0.5s",
-            "duration": pacing_profile.focus_duration,
-            "scale": 1.08,
-            "color": "success",
-        },
         "objects": objects,
         "animations": _step_animations(
-            beat=beat,
             duration=duration,
-            target_id=after_card_id,
             pacing_profile=pacing_profile,
-            step_target_id=step_target_id,
-            highlight_color="success",
             reveal_target_ids=_reveal_object_ids(objects) if include_narration else None,
             extra_animations=extra_animations,
         ),
@@ -1681,17 +1402,12 @@ def _build_comparison_scene(
 
 def _step_animations(
     *,
-    beat: Beat,
     duration: str,
-    target_id: str,
     pacing_profile: PacingProfile,
-    step_target_id: str | None = None,
-    highlight_color: str = "accent",
     reveal_target_ids: list[str] | None = None,
     extra_animations: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     scene_seconds = max(0.0, float(duration.removesuffix("s")))
-    active_duration = max(pacing_profile.highlight_seconds, scene_seconds - 0.4)
 
     animations: list[dict[str, Any]] = []
     if reveal_target_ids:
@@ -1707,45 +1423,9 @@ def _step_animations(
                 }
             )
 
-    animations.append(
-        {
-            "action": "highlight",
-            "target": target_id,
-            "at": "0.4s",
-            "duration": pacing_profile.highlight_duration,
-            "style": "glow",
-            "color": highlight_color,
-        }
-    )
-    if step_target_id is not None:
-        animations.extend(
-            [
-                {
-                    "action": "highlight",
-                    "target": step_target_id,
-                    "at": "0s",
-                    "duration": format_duration(active_duration),
-                    "style": "glow",
-                    "color": "accent",
-                },
-                {
-                    "action": "scale",
-                    "target": step_target_id,
-                    "at": "0.1s",
-                    "duration": pacing_profile.scale_duration,
-                    "scale_factor": 1.14,
-                },
-            ]
-        )
     if extra_animations:
         animations.extend(extra_animations)
     return animations
-
-
-def _step_target_id(beats: list[Beat], beat: Beat) -> str | None:
-    if len(beats) <= 1:
-        return None
-    return f"step_{beat.index + 1}"
 
 
 def _caption_group(
@@ -1785,13 +1465,24 @@ def _connector_draw_animations(
 ) -> list[dict[str, Any]]:
     animations: list[dict[str, Any]] = []
     for index, connector_id in enumerate(connector_ids):
-        animations.append(
-            {
-                "action": "draw",
-                "target": connector_id,
-                "at": format_duration(start + index * gap),
-                "duration": pacing_profile.continuity_duration,
-            }
+        draw_id = f"draw_{connector_id}"
+        animations.extend(
+            [
+                {
+                    "id": draw_id,
+                    "action": "draw",
+                    "target": connector_id,
+                    "at": format_duration(start + index * gap),
+                    "duration": pacing_profile.continuity_duration,
+                },
+                {
+                    "id": f"flow_{connector_id}",
+                    "action": "flow",
+                    "target": connector_id,
+                    "after": draw_id,
+                    "duration": pacing_profile.continuity_duration,
+                },
+            ]
         )
     return animations
 

@@ -7,7 +7,105 @@ from pathlib import Path
 import pytest
 
 from kaivra.mcp import workspace as workspace_module
+from kaivra.mcp.story_contract import validate_story_contract_markdown
 from kaivra.mcp.workspace import KaivraWorkspace
+
+
+def _complete_story_contract() -> str:
+    return """# A Tiny Explainer — Story Contract
+
+## Intent translation and learning transformation
+
+Before, a viewer cannot explain how a small input becomes a prediction. After,
+they can explain the causal path in their own words. The learning goal is a
+clear mental model, not reciting the example equation.
+
+## Viewer question and promise
+
+How does a small input become a useful prediction? The viewer will be able to explain the path.
+
+## Audience starting point
+
+The viewer is new to the topic, so every new term is defined before it appears.
+
+## Concrete entry point
+
+Start with a familiar dog-or-cat choice instead of a detached equation.
+
+## Mental model and analogy map
+
+| Everyday scorecard | Machine meaning | Where the analogy stops |
+| --- | --- | --- |
+| Current clue | A machine input | The analogy is not a literal classifier. |
+
+## Training, prediction, and outcome boundary
+
+Earlier examples set the scorecard. Now it is fixed while the new input moves
+through it. After the pass, the model returns an estimate.
+
+## Prerequisite staircase
+
+| Learner question | Visual proof | Teach-back |
+| --- | --- | --- |
+| What does the clue mean? | A visible meter | It describes the current input. |
+
+## Causal ledger
+
+Every number has a name, source, operation, and result meaning before it is shown.
+
+## Causal reveal plan
+
+| Source | Learned rule | Rationale before operation/output | Visible action | Persistent changed state | Sound-off causal evidence |
+| --- | --- | --- | --- | --- | --- |
+| Current clue | A saved scorecard rule | The clue must be scaled before it can sway the guess. | A dimmer shortens the clue into a nudge. | The same running balance keeps the nudge. | A muted reviewer can point to the clue, rule, action, and changed balance. |
+
+## Beat sheet
+
+| Incoming belief | Learner question | Visual proof | Outgoing belief |
+| --- | --- | --- | --- |
+| A number feels arbitrary. | Why multiply? | A dimmer changes a clue. | A weight scales influence. |
+
+## Misconception map
+
+| Likely wrong inference | Repair |
+| --- | --- |
+| A raw score is a percentage. | Show the score and probability as different scales. |
+
+## Confusion traps
+
+Do not show an unlabeled number or turn a raw score into a percentage without naming the conversion.
+
+## Acceptance checks
+
+A sound-off reviewer can identify the case and current state. A teach-back
+reviewer can explain why operations happen. A counterfactual reviewer can
+predict how a changed input moves the result.
+
+## Creative capability requests
+
+No missing capabilities.
+"""
+
+
+def test_story_contract_requires_a_causal_reveal_plan_with_review_evidence() -> None:
+    complete_contract = _complete_story_contract()
+
+    assert validate_story_contract_markdown(complete_contract) == ()
+
+    missing_section = complete_contract.replace("## Causal reveal plan", "## Reveal plan", 1)
+    missing_section_errors = validate_story_contract_markdown(missing_section)
+    assert any(
+        "missing required section: ## Causal reveal plan" in error
+        for error in missing_section_errors
+    )
+
+    incomplete_plan = complete_contract.replace(
+        "| Source | Learned rule | Rationale before operation/output | Visible action | Persistent changed state | Sound-off causal evidence |",
+        "| Source | Rule | Reason | Motion | State | Review |",
+        1,
+    )
+    incomplete_plan_errors = validate_story_contract_markdown(incomplete_plan)
+    assert any("Causal reveal plan" in error for error in incomplete_plan_errors)
 
 
 def _check_animation(workspace: KaivraWorkspace, doc: dict) -> dict:
@@ -19,6 +117,29 @@ def _assert_structured_edits(edits: list[dict]) -> None:
     assert edits
     assert all(isinstance(edit, dict) for edit in edits)
     assert all(required_keys <= set(edit) for edit in edits)
+
+
+def test_planner_returns_story_contract_and_continuous_choreography(tmp_path: Path) -> None:
+    plan = KaivraWorkspace(tmp_path).plan_animation(topic="Forward propagation")
+
+    assert plan["suggested_meta"]["theme"] == "editorial"
+    assert plan["draft_defaults"]["pattern"] == "motion_explainer"
+    assert "Confirm the learner transformation" in plan["story_contract"]["human_checkpoint"]
+    assert "Causal reveal plan" in plan["story_contract"]["required_sections"]
+    assert "Creative capability requests" in plan["story_contract"]["required_sections"]
+    assert "source and learned rule" in plan["story_contract"]["causal_reveal_rule"]
+    assert [brief["segment_id"] for brief in plan["choreography_review_briefs"]] == [
+        "movement_01_arrival",
+        "movement_02_transformation",
+        "movement_03_consequence",
+        "movement_04_transfer",
+    ]
+    assert all(brief["shared_context"] for brief in plan["choreography_review_briefs"])
+    assert all(brief["dominant_visual"] for brief in plan["choreography_review_briefs"])
+    assert all(
+        "must not be composed as an isolated slide" in brief["constraint"]
+        for brief in plan["choreography_review_briefs"]
+    )
 
 
 def test_workspace_guided_flow_writes_files(tmp_path: Path) -> None:
@@ -41,7 +162,7 @@ def test_workspace_guided_flow_writes_files(tmp_path: Path) -> None:
     source_path.write_text(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"title": "Queue Basics", "theme": added_theme["theme_name"]},
                 "scenes": [
                     {
@@ -69,6 +190,232 @@ def test_workspace_guided_flow_writes_files(tmp_path: Path) -> None:
     rendered = workspace.render_animation(file_path=str(source_path), format="png")
     assert rendered["status"] == "ok"
     assert Path(rendered["artifact_path"]).exists()
+
+
+def test_file_backed_layperson_explainer_requires_a_complete_story_contract(
+    tmp_path: Path,
+) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    source_path = tmp_path / "animations" / "dog-or-cat.json"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text(
+        json.dumps(
+            {
+                "version": "1.5",
+                "meta": {"title": "Dog or Cat", "audience": "layperson"},
+                "scenes": [
+                    {
+                        "id": "question",
+                        "duration": "4s",
+                        "objects": [{"id": "question", "type": "text", "content": "Dog or cat?"}],
+                        "animations": [{"action": "fade-in", "target": "question"}],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    checked = workspace.check_animation(file_path=str(source_path))
+
+    assert checked["valid"] is False
+    assert any("meta.story_contract" in issue for issue in checked["blocking_issues"])
+    with pytest.raises(ValueError, match="Story contract preflight failed"):
+        workspace.preview_animation(file_path=str(source_path))
+    with pytest.raises(ValueError, match="Story contract preflight failed"):
+        workspace.render_animation(file_path=str(source_path), format="png")
+
+
+def test_story_contract_tool_writes_valid_sidecar_and_file_backed_check_reads_it(
+    tmp_path: Path,
+) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    source_path = tmp_path / "animations" / "dog-or-cat.json"
+    created = workspace.create_story_contract(
+        animation_path=str(source_path), markdown=_complete_story_contract()
+    )
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_path.write_text(
+        json.dumps(
+            {
+                "version": "1.5",
+                "meta": {
+                    "title": "Dog or Cat",
+                    "audience": "layperson",
+                    "story_contract": "dog-or-cat.story.md",
+                },
+                "scenes": [
+                    {
+                        "id": "question",
+                        "duration": "4s",
+                        "objects": [{"id": "question", "type": "text", "content": "Dog or cat?"}],
+                        "animations": [{"action": "fade-in", "target": "question"}],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    checked = workspace.check_animation(file_path=str(source_path))
+
+    assert created["status"] == "ok"
+    assert Path(created["story_contract_path"]).exists()
+    assert checked["valid"] is True
+    assert checked["story_contract"]["valid"] is True
+
+
+def test_raw_layperson_json_gets_story_contract_warning_without_losing_compatibility(
+    tmp_path: Path,
+) -> None:
+    checked = _check_animation(
+        KaivraWorkspace(tmp_path),
+        {
+            "version": "1.5",
+            "meta": {"audience": "layperson"},
+            "scenes": [
+                {
+                    "id": "question",
+                    "duration": "4s",
+                    "objects": [{"id": "question", "type": "text", "content": "Question"}],
+                    "animations": [{"action": "fade-in", "target": "question"}],
+                }
+            ],
+        },
+    )
+
+    assert checked["valid"] is True
+    assert any(warning.startswith("STORY_CONTRACT:") for warning in checked["warnings"])
+
+
+def test_story_contract_must_be_the_paired_sidecar(tmp_path: Path) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    source_path = tmp_path / "animations" / "dog-or-cat.json"
+    source_path.parent.mkdir(parents=True)
+    (source_path.parent / "other.story.md").write_text(_complete_story_contract(), encoding="utf-8")
+    source_path.write_text(
+        json.dumps(
+            {
+                "version": "1.5",
+                "meta": {"audience": "layperson", "story_contract": "other.story.md"},
+                "scenes": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    checked = workspace.check_animation(file_path=str(source_path))
+
+    assert checked["valid"] is False
+    assert any("paired sidecar" in issue for issue in checked["blocking_issues"])
+
+
+def test_preview_animation_selects_a_representative_nonblank_opening_frame(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source_path = tmp_path / "animations" / "preview.json"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text(
+        json.dumps(
+            {
+                "meta": {"title": "Preview", "theme": "editorial", "show_subtitles": False},
+                "scenes": [
+                    {
+                        "id": "intro",
+                        "duration": "4s",
+                        "auto_visible": False,
+                        "objects": [
+                            {"type": "text", "id": "first", "content": "First"},
+                            {"type": "text", "id": "second", "content": "Second"},
+                        ],
+                        "animations": [
+                            {
+                                "action": "fade-in",
+                                "target": "first",
+                                "at": "0.5s",
+                                "duration": "0.5s",
+                            },
+                            {
+                                "action": "fade-in",
+                                "target": "second",
+                                "at": "2s",
+                                "duration": "0.5s",
+                            },
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    rendered_times: list[float] = []
+
+    class CapturingRenderer:
+        def __init__(self, _theme) -> None:
+            pass
+
+        def render_frame_to_file(self, _graph, time: float, path: str) -> None:
+            rendered_times.append(time)
+            Path(path).write_bytes(b"preview")
+
+    monkeypatch.setattr(workspace_module, "CairoRenderer", CapturingRenderer)
+
+    previewed = KaivraWorkspace(tmp_path).preview_animation(file_path=str(source_path))
+
+    assert previewed["preview_time_seconds"] == 2.5
+    assert rendered_times == [2.5]
+    assert Path(previewed["preview_image_path"]).exists()
+
+
+def test_check_animation_rejects_flow_targets_that_are_not_connectors(tmp_path: Path) -> None:
+    checked = _check_animation(
+        KaivraWorkspace(tmp_path),
+        {
+            "meta": {"theme": "editorial", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "intro",
+                    "duration": "4s",
+                    "objects": [{"type": "circle", "id": "node", "content": "Node"}],
+                    "animations": [
+                        {"action": "flow", "target": "node", "at": "1s", "duration": "1s"}
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert checked["valid"] is False
+    assert any("must target a connector" in issue for issue in checked["blocking_issues"])
+
+
+def test_check_animation_warns_when_flow_precedes_its_connector_draw(tmp_path: Path) -> None:
+    checked = _check_animation(
+        KaivraWorkspace(tmp_path),
+        {
+            "meta": {"theme": "editorial", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "intro",
+                    "duration": "4s",
+                    "auto_visible": False,
+                    "objects": [
+                        {"type": "circle", "id": "source", "content": "Source"},
+                        {"type": "circle", "id": "target", "content": "Target"},
+                        {"type": "connector", "id": "path", "from": "source", "to": "target"},
+                    ],
+                    "animations": [
+                        {"action": "draw", "target": "path", "at": "1s", "duration": "1s"},
+                        {"action": "flow", "target": "path", "at": "1.5s", "duration": "0.5s"},
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert checked["valid"] is False
+    assert any("must follow the draw animation" in issue for issue in checked["blocking_issues"])
 
 
 def test_check_animation_warns_on_scene_pacing_and_narration_mismatch(tmp_path: Path) -> None:
@@ -125,6 +472,57 @@ def test_check_animation_warns_on_scene_pacing_and_narration_mismatch(tmp_path: 
     )
 
 
+def test_educational_pacing_allows_a_slow_continuous_movement(tmp_path: Path) -> None:
+    checked = _check_animation(
+        KaivraWorkspace(tmp_path),
+        {
+            "meta": {"pacing": "educational", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "slow_explanation",
+                    "duration": "40s",
+                    "narration": "A single visual relationship changes slowly enough to understand.",
+                    "objects": [{"id": "actor", "type": "circle", "content": "clue"}],
+                    "animations": [{"action": "appear", "target": "actor", "at": "1s"}],
+                }
+            ],
+        },
+    )
+
+    assert not any("slow_explanation pacing" in warning for warning in checked["warnings"])
+
+
+def test_educational_pacing_allows_a_long_continuous_choreography(tmp_path: Path) -> None:
+    animations = [
+        {
+            "id": f"move_{index}",
+            "action": "move",
+            "target": "actor",
+            "at": f"{5 + index * 10}s",
+            "duration": "1s",
+            "translate": {"x": 0.05 if index % 2 == 0 else -0.05},
+        }
+        for index in range(12)
+    ]
+    checked = _check_animation(
+        KaivraWorkspace(tmp_path),
+        {
+            "meta": {"pacing": "educational", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "continuous_world",
+                    "duration": "120s",
+                    "narration": "One stable visual world changes as each cause produces its effect.",
+                    "objects": [{"id": "actor", "type": "circle", "content": "clue"}],
+                    "animations": animations,
+                }
+            ],
+        },
+    )
+
+    assert not any("continuous_world pacing" in warning for warning in checked["warnings"])
+
+
 def test_check_animation_warns_when_body_text_duplicates_narration(tmp_path: Path) -> None:
     workspace = KaivraWorkspace(tmp_path)
     checked = _check_animation(
@@ -164,12 +562,57 @@ def test_check_animation_warns_when_body_text_duplicates_narration(tmp_path: Pat
     )
 
 
+def test_check_animation_rejects_presentation_style_spoken_intro(tmp_path: Path) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    checked = _check_animation(
+        workspace,
+        {
+            "meta": {"theme": "editorial", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "intro",
+                    "duration": "6s",
+                    "narration": "Welcome. In this video, we'll walk through queues step by step.",
+                    "objects": [{"id": "queue", "type": "circle", "visible": True}],
+                }
+            ],
+        },
+    )
+
+    assert any("spoken_narration" in warning for warning in checked["warnings"])
+    assert any(edit["action"] == "rewrite_for_speech" for edit in checked["recommended_edits"])
+
+
+def test_check_animation_rejects_self_declarative_teaching_narration(tmp_path: Path) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    checked = _check_animation(
+        workspace,
+        {
+            "meta": {"theme": "editorial", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "teaching_plan",
+                    "duration": "8s",
+                    "narration": (
+                        "The queue is full. Let's slow this down, and then we'll walk through "
+                        "what happens to the next request."
+                    ),
+                    "objects": [{"id": "queue", "type": "circle", "visible": True}],
+                }
+            ],
+        },
+    )
+
+    assert any("teaching process" in warning for warning in checked["warnings"])
+    assert any(edit["action"] == "rewrite_for_speech" for edit in checked["recommended_edits"])
+
+
 def test_check_animation_flags_internal_terms_for_layperson_audience(tmp_path: Path) -> None:
     workspace = KaivraWorkspace(tmp_path)
     checked = _check_animation(
         workspace,
         {
-            "version": "1.3",
+            "version": "1.5",
             "meta": {"theme": "modern", "audience": "layperson"},
             "scenes": [
                 {
@@ -195,12 +638,41 @@ def test_check_animation_flags_internal_terms_for_layperson_audience(tmp_path: P
     assert any(edit["action"] == "simplify_language" for edit in checked["recommended_edits"])
 
 
+def test_check_animation_matches_layperson_jargon_as_complete_terms(tmp_path: Path) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    checked = _check_animation(
+        workspace,
+        {
+            "version": "1.5",
+            "meta": {"theme": "editorial", "audience": "layperson"},
+            "scenes": [
+                {
+                    "id": "finance_language",
+                    "duration": "8s",
+                    "narration": (
+                        "Client capital supports one portfolio, while the prime broker "
+                        "coordinates settlement and reporting."
+                    ),
+                    "objects": [
+                        {"id": "account", "type": "box", "content": "Prime account"},
+                    ],
+                    "animations": [
+                        {"action": "fade-in", "target": "account", "duration": "0.5s"},
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert not any("audience_language" in warning for warning in checked["warnings"])
+
+
 def test_check_animation_warns_when_mixed_audience_narration_is_too_codey(tmp_path: Path) -> None:
     workspace = KaivraWorkspace(tmp_path)
     checked = _check_animation(
         workspace,
         {
-            "version": "1.3",
+            "version": "1.5",
             "meta": {"theme": "modern", "audience": "mixed"},
             "scenes": [
                 {
@@ -240,8 +712,9 @@ def test_check_animation_annotates_narration_pacing_when_voice_retiming_is_enabl
                         "duration": "4s",
                         "layout": "center",
                         "narration": (
-                            "Now we walk through one concrete example, and then we generalize the same "
-                            "pattern across every other connection in the layer."
+                            "One concrete example reveals a pattern that repeats across every "
+                            "other connection in the layer because each connection uses the same "
+                            "input and output relationship."
                         ),
                         "objects": [
                             {"id": "voice_card", "type": "text", "content": "Worked example"},
@@ -348,7 +821,7 @@ def test_check_animation_skips_explanatory_warning_for_outcome_language_with_tra
     checked = _check_animation(
         workspace,
         {
-            "version": "1.3",
+            "version": "1.5",
             "meta": {"theme": "modern", "continuity": True},
             "objects": [
                 {
@@ -465,7 +938,7 @@ def test_check_animation_write_back_enables_layout_group_visibility(tmp_path: Pa
     source_path.write_text(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"theme": "modern", "show_narration": False},
                 "scenes": [
                     {
@@ -520,7 +993,7 @@ def test_check_animation_reports_narration_timing_without_rewriting_scene_durati
     source_path.write_text(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"theme": "modern", "show_narration": True},
                 "scenes": [
                     {
@@ -696,6 +1169,37 @@ def test_check_animation_warns_when_narrated_scenes_repeat_same_scaffold(tmp_pat
 
     assert checked["valid"] is True
     assert any("reuse the same local object scaffold" in warning for warning in checked["warnings"])
+    assert any("reads as a slideshow" in warning for warning in checked["warnings"])
+
+
+def test_check_animation_warns_when_pulse_replaces_causal_motion(tmp_path: Path) -> None:
+    checked = _check_animation(
+        KaivraWorkspace(tmp_path),
+        {
+            "meta": {"show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "decorated_static_frame",
+                    "duration": "6s",
+                    "narration": "The saved rule changes how strongly this clue counts.",
+                    "objects": [
+                        {"id": "rule", "type": "box", "content": "saved rule"},
+                    ],
+                    "animations": [
+                        {"action": "pulse", "target": "rule", "at": "2s", "duration": "1s"}
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert any(
+        "Decoration is carrying the motion instead of the explanation" in warning
+        for warning in checked["warnings"]
+    )
+    assert any(
+        edit["action"] == "replace_decorative_motion" for edit in checked["recommended_edits"]
+    )
 
 
 def test_check_animation_blocks_replace_when_objects_are_not_aligned(tmp_path: Path) -> None:
@@ -848,7 +1352,7 @@ def test_workspace_render_and_preview_find_nearest_workspace_theme_for_nested_do
     source_path.write_text(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"title": "Nested Theme", "theme": theme["theme_name"]},
                 "scenes": [
                     {
@@ -880,7 +1384,7 @@ def test_preview_and_render_use_document_workspace_when_server_root_is_elsewhere
     source_path.write_text(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"title": "Doc Workspace", "theme": "modern"},
                 "scenes": [
                     {
@@ -1068,7 +1572,7 @@ def test_voice_sync_findings_flag_unmatched_targets(tmp_path: Path) -> None:
     """ElevenLabs sync audit warns when narration misses animation targets."""
     workspace = KaivraWorkspace(tmp_path)
     doc = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Sync Test", "theme": "modern"},
         "scenes": [
             {
@@ -1107,7 +1611,7 @@ def test_voice_sync_findings_warn_for_local_voice(tmp_path: Path) -> None:
     """Local voice still benefits from keyword-match warnings during authoring."""
     workspace = KaivraWorkspace(tmp_path)
     doc = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Sync Test", "theme": "modern"},
         "scenes": [
             {
@@ -1133,13 +1637,13 @@ def test_voice_sync_findings_warn_for_local_voice(tmp_path: Path) -> None:
 
     voice_findings = [f for f in result["audit_findings"] if "voice_sync" in f]
     assert any("'server'" in f for f in voice_findings)
-    assert any("scene-level timing" in f for f in voice_findings)
+    assert any("estimate word timing" in f for f in voice_findings)
 
 
 def test_voice_sync_findings_warn_for_openai_voice(tmp_path: Path) -> None:
     workspace = KaivraWorkspace(tmp_path)
     doc = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Sync Test", "theme": "modern"},
         "scenes": [
             {
@@ -1165,13 +1669,13 @@ def test_voice_sync_findings_warn_for_openai_voice(tmp_path: Path) -> None:
 
     voice_findings = [f for f in result["audit_findings"] if "voice_sync" in f]
     assert any("'server'" in f for f in voice_findings)
-    assert any("OpenAI voice keeps scene-level timing" in f for f in voice_findings)
+    assert any("OpenAI voice will estimate word timing" in f for f in voice_findings)
 
 
 def test_voice_sync_findings_skip_connectors_and_tracker_tokens(tmp_path: Path) -> None:
     workspace = KaivraWorkspace(tmp_path)
     doc = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Sync Test", "theme": "modern"},
         "objects": [
             {
@@ -1219,7 +1723,7 @@ def test_voice_sync_findings_absent_without_voice_flag(tmp_path: Path) -> None:
     """check_animation without voice=True should not emit voice_sync findings."""
     workspace = KaivraWorkspace(tmp_path)
     doc = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Sync Test", "theme": "modern"},
         "scenes": [
             {
@@ -1242,12 +1746,137 @@ def test_voice_sync_findings_absent_without_voice_flag(tmp_path: Path) -> None:
     assert voice_findings == []
 
 
+def test_voice_sync_warns_when_grouped_text_cannot_follow_spoken_order(tmp_path: Path) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    doc = {
+        "version": "1.5",
+        "meta": {"title": "Sync Test", "theme": "editorial"},
+        "scenes": [
+            {
+                "id": "intro",
+                "duration": "6s",
+                "template": "editorial",
+                "narration": "First alpha, then beta.",
+                "objects": [
+                    {
+                        "type": "group",
+                        "id": "labels",
+                        "layout": {"type": "stack"},
+                        "children": [
+                            {"type": "text", "id": "alpha", "content": "alpha"},
+                            {"type": "text", "id": "beta", "content": "beta"},
+                        ],
+                    }
+                ],
+                "animations": [
+                    {
+                        "action": "reveal-children",
+                        "target": "labels",
+                        "at": "0.5s",
+                        "duration": "0.4s",
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = workspace.check_animation(dsl_json=json.dumps(doc), voice=True)
+    assert any("voice_sync_grouped_reveal" in item for item in result["audit_findings"])
+
+
+def test_voice_sync_warns_when_visual_reveal_order_opposes_narration(tmp_path: Path) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    doc = {
+        "version": "1.5",
+        "meta": {"title": "Sync Test", "theme": "editorial"},
+        "scenes": [
+            {
+                "id": "intro",
+                "duration": "6s",
+                "template": "editorial",
+                "narration": "First alpha, then beta.",
+                "objects": [
+                    {"type": "text", "id": "alpha", "content": "alpha"},
+                    {"type": "text", "id": "beta", "content": "beta"},
+                ],
+                "animations": [
+                    {"action": "fade-in", "target": "beta", "at": "0.5s"},
+                    {"action": "fade-in", "target": "alpha", "at": "2s"},
+                ],
+            }
+        ],
+    }
+
+    result = workspace.check_animation(dsl_json=json.dumps(doc), voice=True)
+    assert any("voice_sync_order" in item for item in result["audit_findings"])
+
+
+def test_voice_audit_accepts_semantic_authored_at_fallback(tmp_path: Path) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    doc = {
+        "version": "1.5",
+        "meta": {"title": "Sync Test", "theme": "editorial"},
+        "scenes": [
+            {
+                "id": "intro",
+                "duration": "6s",
+                "template": "editorial",
+                "narration": "Alpha appears first.",
+                "objects": [
+                    {"type": "text", "id": "alpha", "content": "alpha"},
+                ],
+                "animations": [
+                    {
+                        "id": "show_alpha",
+                        "action": "fade-in",
+                        "target": "alpha",
+                        "at": "short",
+                        "cue": "alpha",
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = workspace.check_animation(dsl_json=json.dumps(doc), voice=True)
+
+    assert result["valid"] is True
+    assert not result["blocking_issues"]
+
+
+def test_editorial_audit_warns_when_heading_restates_narration(tmp_path: Path) -> None:
+    workspace = KaivraWorkspace(tmp_path)
+    doc = {
+        "version": "1.5",
+        "meta": {"title": "Copy Test", "theme": "editorial"},
+        "scenes": [
+            {
+                "id": "intro",
+                "duration": "6s",
+                "template": "editorial",
+                "objects": [
+                    {
+                        "type": "text",
+                        "id": "sentence",
+                        "content": "First, each input gets a say.",
+                        "style": "heading",
+                    }
+                ],
+                "animations": [{"action": "fade-in", "target": "sentence", "at": "0.5s"}],
+            }
+        ],
+    }
+
+    result = workspace.check_animation(dsl_json=json.dumps(doc))
+    assert any("screen_prose" in item for item in result["audit_findings"])
+
+
 def test_check_animation_warns_when_continuity_id_changes_content_too_much(tmp_path: Path) -> None:
     workspace = KaivraWorkspace(tmp_path)
     result = _check_animation(
         workspace,
         {
-            "version": "1.3",
+            "version": "1.5",
             "meta": {"theme": "modern", "continuity": True},
             "scenes": [
                 {
@@ -1286,7 +1915,7 @@ def test_check_animation_skips_continuity_warning_for_scene_titles(tmp_path: Pat
     result = _check_animation(
         workspace,
         {
-            "version": "1.3",
+            "version": "1.5",
             "meta": {"theme": "modern", "continuity": True},
             "scenes": [
                 {

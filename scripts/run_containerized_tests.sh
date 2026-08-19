@@ -6,7 +6,9 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE_TAG="${KAIVRA_PRECOMMIT_IMAGE:-kaivra-precommit:py313}"
 _WORKSPACE=""  # set in main(); referenced by the EXIT trap
 DOCKERFILE_PATH="$ROOT_DIR/docker/precommit.Dockerfile"
-BUILD_CONTEXT="$ROOT_DIR/docker"
+# The pre-commit image installs the bundled Inter font from src/kaivra/assets.
+# Build from the repository root so that asset is available to Docker.
+BUILD_CONTEXT="$ROOT_DIR"
 ENGINE_LABEL=""
 ENGINE=()
 

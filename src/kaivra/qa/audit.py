@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -35,6 +36,7 @@ def audit_scene_graph(
         for t in sample_times:
             nodes = deepcopy(scene.node_map)
             apply_animations_at_time(nodes, scene.timeline, t)
+            _apply_group_envelopes(nodes)
 
             visible_nodes = [node for node in nodes.values() if _should_audit_node(node)]
             visible_connectors = [node for node in nodes.values() if _should_audit_connector(node)]
@@ -57,9 +59,48 @@ def audit_scene_graph(
     return _dedupe_findings(findings)
 
 
+def _apply_group_envelopes(nodes: dict[str, SceneNode]) -> None:
+    """Apply the same parent visibility envelope used by both renderers.
+
+    The scene node map is flat for connector lookup, but authored focus stages
+    often overlay several child groups in one grid cell. A hidden parent must
+    therefore hide its descendants during audits too, or inactive stages are
+    incorrectly reported as colliding with the active one.
+    """
+    child_ids = {
+        child.id
+        for node in nodes.values()
+        if node.obj_type == ObjectType.GROUP
+        for child in node.children
+    }
+    visited: set[str] = set()
+
+    def walk(node: SceneNode, *, parent_visible: bool, parent_opacity: float) -> None:
+        if node.id in visited:
+            return
+        visited.add(node.id)
+        node.visible = parent_visible and node.visible
+        node.opacity *= parent_opacity
+        for child in node.children:
+            resolved_child = nodes.get(child.id, child)
+            walk(
+                resolved_child,
+                parent_visible=node.visible,
+                parent_opacity=node.opacity,
+            )
+
+    for node in nodes.values():
+        if node.id not in child_ids:
+            walk(node, parent_visible=True, parent_opacity=1.0)
+
+
 def _sample_times(duration: float, count: int) -> list[float]:
     duration = max(0.01, duration)
-    count = max(1, count)
+    # Five samples are enough for a short beat, but they leave long educational
+    # choreographies effectively unaudited for tens of seconds at a time. Keep
+    # the public knob as a minimum while guaranteeing a checkpoint at least
+    # every ten seconds. Midpoints continue to avoid exact crossfade boundaries.
+    count = max(1, count, math.ceil(duration / 10.0))
     # Midpoint sampling avoids treating deliberate continuity crossfades at the
     # exact scene boundary as hard layout regressions.
     return [min(duration - 0.001, duration * (idx + 0.5) / count) for idx in range(count)]

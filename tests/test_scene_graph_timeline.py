@@ -56,6 +56,12 @@ def test_group_reveal_propagates_to_unanimated_children_but_not_to_explicit_chil
                             "children": [
                                 {"id": "child_a", "type": "box", "content": "A"},
                                 {"id": "child_b", "type": "box", "content": "B"},
+                                {
+                                    "id": "future_route",
+                                    "type": "connector",
+                                    "from": "child_a",
+                                    "to": "child_b",
+                                },
                             ],
                         }
                     ],
@@ -65,6 +71,12 @@ def test_group_reveal_propagates_to_unanimated_children_but_not_to_explicit_chil
                             "action": "fade-in",
                             "target": "child_b",
                             "at": "1.5s",
+                            "duration": "0.6s",
+                        },
+                        {
+                            "action": "draw",
+                            "target": "future_route",
+                            "at": "2.5s",
                             "duration": "0.6s",
                         },
                     ],
@@ -79,6 +91,7 @@ def test_group_reveal_propagates_to_unanimated_children_but_not_to_explicit_chil
     assert scene.node_map["child_a"].visible is True
     assert scene.node_map["child_a"].opacity > 0.0
     assert scene.node_map["child_b"].visible is False
+    assert scene.node_map["future_route"].visible is False
 
     apply_animations_at_time(scene.node_map, scene.timeline, 2.0)
 
@@ -337,6 +350,422 @@ def test_semantic_cue_anchor_uses_external_audio_timing_data() -> None:
     assert graph.scenes[0].timeline[0].start_time == 1.3
 
 
+def test_semantic_cue_can_use_authored_at_fallback_and_voice_override() -> None:
+    doc = DocumentSpec.model_validate(
+        {
+            "meta": {"theme": "modern", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "cue_scene",
+                    "duration": "5s",
+                    "layout": "center",
+                    "objects": [{"id": "node", "type": "box", "content": "Cue"}],
+                    "animations": [
+                        {
+                            "action": "fade-in",
+                            "target": "node",
+                            "at": "1.2s",
+                            "cue": "spoken cue",
+                            "duration": "short",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    silent_graph = build_scene_graph(doc, get_theme(doc.meta.theme))
+    assert silent_graph.scenes[0].timeline[0].start_time == 1.2
+
+    voice_graph = build_scene_graph(
+        doc,
+        get_theme(doc.meta.theme),
+        audio_timing_data=AudioTimingData(
+            scenes={
+                "cue_scene": SceneAudioTiming(
+                    id="cue_scene",
+                    duration_seconds=5.0,
+                    cues=(AudioCue(start_seconds=2.6, duration_seconds=0.4, text="spoken cue"),),
+                )
+            }
+        ),
+    )
+    assert voice_graph.scenes[0].timeline[0].start_time == 2.6
+
+
+def test_voice_graph_uses_measured_audio_duration_instead_of_authored_fallback() -> None:
+    doc = DocumentSpec.model_validate(
+        {
+            "meta": {"theme": "modern", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "measured_voice",
+                    "duration": "10s",
+                    "layout": "center",
+                    "objects": [{"id": "node", "type": "box", "content": "Result"}],
+                    "animations": [
+                        {
+                            "action": "fade-in",
+                            "target": "node",
+                            "at": "6s",
+                            "cue": "show result",
+                            "duration": "0.4s",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    timing_data = AudioTimingData(
+        scenes={
+            "measured_voice": SceneAudioTiming(
+                id="measured_voice",
+                duration_seconds=3.5,
+                cues=(AudioCue(start_seconds=2.4, duration_seconds=0.3, text="show result"),),
+            )
+        }
+    )
+
+    silent_graph = build_scene_graph(doc, get_theme(doc.meta.theme))
+    voice_graph = build_scene_graph(
+        doc,
+        get_theme(doc.meta.theme),
+        audio_timing_data=timing_data,
+        fit_scene_durations_to_audio=True,
+    )
+
+    assert silent_graph.scenes[0].duration == 10.0
+    assert silent_graph.scenes[0].timeline[0].start_time == 6.0
+    assert voice_graph.scenes[0].duration == 3.5
+    assert voice_graph.scenes[0].timeline[0].start_time == 2.4
+
+
+def test_voice_graph_extends_only_for_a_cue_animation_that_finishes_after_audio() -> None:
+    doc = DocumentSpec.model_validate(
+        {
+            "meta": {"theme": "modern", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "animation_tail",
+                    "duration": "10s",
+                    "layout": "center",
+                    "objects": [{"id": "node", "type": "box", "content": "Result"}],
+                    "animations": [
+                        {
+                            "action": "fade-in",
+                            "target": "node",
+                            "at": "6s",
+                            "cue": "final answer",
+                            "duration": "0.8s",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    graph = build_scene_graph(
+        doc,
+        get_theme(doc.meta.theme),
+        audio_timing_data=AudioTimingData(
+            scenes={
+                "animation_tail": SceneAudioTiming(
+                    id="animation_tail",
+                    duration_seconds=2.8,
+                    cues=(AudioCue(start_seconds=2.6, duration_seconds=0.2, text="final answer"),),
+                )
+            }
+        ),
+        fit_scene_durations_to_audio=True,
+    )
+
+    assert graph.scenes[0].duration == pytest.approx(3.4)
+
+
+def test_continuity_uses_visual_center_when_semantic_gutters_change() -> None:
+    graph = _build_graph(
+        {
+            "meta": {"theme": "editorial", "show_subtitles": False, "continuity": True},
+            "scenes": [
+                {
+                    "id": "plain_pet",
+                    "duration": "4s",
+                    "layout": "center",
+                    "objects": [
+                        {
+                            "id": "hero_pet",
+                            "actor_id": "hero_pet",
+                            "continuity_mode": "position_only",
+                            "type": "pet_portrait",
+                            "pet_kind": "mystery",
+                            "size_variant": "hero",
+                            "show_feature_labels": False,
+                            "visible": True,
+                        }
+                    ],
+                },
+                {
+                    "id": "labelled_pet",
+                    "duration": "4s",
+                    "layout": "center",
+                    "objects": [
+                        {
+                            "id": "hero_pet",
+                            "actor_id": "hero_pet",
+                            "continuity_mode": "position_only",
+                            "type": "pet_portrait",
+                            "pet_kind": "mystery",
+                            "pet_highlights": ["ears"],
+                            "size_variant": "hero",
+                            "show_feature_labels": True,
+                            "visible": True,
+                        }
+                    ],
+                },
+            ],
+        }
+    )
+
+    previous_pet = graph.scenes[0].node_map["hero_pet"]
+    labelled_scene = graph.scenes[1]
+    labelled_pet = labelled_scene.node_map["hero_pet"]
+
+    assert labelled_pet.rect.width > previous_pet.rect.width
+    assert labelled_pet.rect.center == previous_pet.rect.center
+    assert not [
+        keyframe
+        for keyframe in labelled_scene.timeline
+        if keyframe.target_id == "hero_pet" and keyframe.action == AnimAction.MOVE
+    ]
+
+
+def test_semantic_cue_matches_contiguous_estimated_word_cues_after_normalization() -> None:
+    doc = DocumentSpec.model_validate(
+        {
+            "meta": {"theme": "modern", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "cue_scene",
+                    "duration": "5s",
+                    "layout": "center",
+                    "objects": [{"id": "node", "type": "box", "content": "Cue"}],
+                    "animations": [
+                        {
+                            "action": "fade-in",
+                            "target": "node",
+                            "at": "0.5s",
+                            "cue": "the right, value!",
+                            "duration": "short",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    graph = build_scene_graph(
+        doc,
+        get_theme(doc.meta.theme),
+        audio_timing_data=AudioTimingData(
+            scenes={
+                "cue_scene": SceneAudioTiming(
+                    id="cue_scene",
+                    duration_seconds=5.0,
+                    cues=(
+                        AudioCue(start_seconds=0.2, duration_seconds=0.1, text="the"),
+                        AudioCue(start_seconds=0.4, duration_seconds=0.1, text="wrong"),
+                        AudioCue(start_seconds=1.4, duration_seconds=0.1, text="THE"),
+                        AudioCue(start_seconds=1.6, duration_seconds=0.1, text="right,"),
+                        AudioCue(start_seconds=1.8, duration_seconds=0.1, text="value!"),
+                    ),
+                )
+            }
+        ),
+    )
+
+    assert graph.scenes[0].timeline[0].start_time == 1.4
+
+
+def test_semantic_cue_matches_inside_a_native_phrase_cue() -> None:
+    doc = DocumentSpec.model_validate(
+        {
+            "meta": {"theme": "modern", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "cue_scene",
+                    "duration": "5s",
+                    "layout": "center",
+                    "objects": [{"id": "node", "type": "box", "content": "Cue"}],
+                    "animations": [
+                        {
+                            "action": "fade-in",
+                            "target": "node",
+                            "at": "0.5s",
+                            "cue": "right value",
+                            "duration": "short",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    graph = build_scene_graph(
+        doc,
+        get_theme(doc.meta.theme),
+        audio_timing_data=AudioTimingData(
+            scenes={
+                "cue_scene": SceneAudioTiming(
+                    id="cue_scene",
+                    duration_seconds=5.0,
+                    cues=(
+                        AudioCue(
+                            start_seconds=2.2,
+                            duration_seconds=0.8,
+                            text="And the RIGHT, value arrives.",
+                        ),
+                    ),
+                )
+            }
+        ),
+    )
+
+    assert graph.scenes[0].timeline[0].start_time == 2.2
+
+
+def test_semantic_cue_uses_at_when_external_timings_have_no_cues() -> None:
+    doc = DocumentSpec.model_validate(
+        {
+            "meta": {"theme": "modern", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "cue_scene",
+                    "duration": "5s",
+                    "layout": "center",
+                    "objects": [{"id": "node", "type": "box", "content": "Cue"}],
+                    "animations": [
+                        {
+                            "action": "fade-in",
+                            "target": "node",
+                            "at": "1.2s",
+                            "cue": "spoken cue",
+                            "duration": "short",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    graph = build_scene_graph(
+        doc,
+        get_theme(doc.meta.theme),
+        audio_timing_data=AudioTimingData(
+            scenes={"cue_scene": SceneAudioTiming(id="cue_scene", duration_seconds=5.0)}
+        ),
+    )
+
+    assert graph.scenes[0].timeline[0].start_time == 1.2
+
+
+def test_semantic_cue_reports_an_actionable_error_when_audio_cues_do_not_match() -> None:
+    doc = DocumentSpec.model_validate(
+        {
+            "meta": {"theme": "modern", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "cue_scene",
+                    "duration": "5s",
+                    "layout": "center",
+                    "objects": [{"id": "node", "type": "box", "content": "Cue"}],
+                    "animations": [
+                        {
+                            "action": "fade-in",
+                            "target": "node",
+                            "at": "1.2s",
+                            "cue": "missing spoken phrase",
+                            "duration": "short",
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(ValueError, match="contiguous, punctuation-normalized phrase"):
+        build_scene_graph(
+            doc,
+            get_theme(doc.meta.theme),
+            audio_timing_data=AudioTimingData(
+                scenes={
+                    "cue_scene": SceneAudioTiming(
+                        id="cue_scene",
+                        duration_seconds=5.0,
+                        cues=(
+                            AudioCue(start_seconds=0.5, duration_seconds=0.4, text="other words"),
+                        ),
+                    )
+                }
+            ),
+        )
+
+
+def test_semantic_after_chain_keeps_its_relative_timing_when_anchor_uses_a_cue() -> None:
+    doc = DocumentSpec.model_validate(
+        {
+            "meta": {"theme": "modern", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "cue_scene",
+                    "duration": "5s",
+                    "layout": "center",
+                    "objects": [
+                        {"id": "node", "type": "box", "content": "Cue"},
+                        {"id": "detail", "type": "text", "content": "Detail"},
+                    ],
+                    "animations": [
+                        {
+                            "id": "show_node",
+                            "action": "fade-in",
+                            "target": "node",
+                            "at": "0.5s",
+                            "cue": "first signal",
+                            "duration": "0.4s",
+                        },
+                        {
+                            "action": "fade-in",
+                            "target": "detail",
+                            "after": "show_node",
+                            "gap": "0.2s",
+                            "duration": "0.4s",
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+
+    graph = build_scene_graph(
+        doc,
+        get_theme(doc.meta.theme),
+        audio_timing_data=AudioTimingData(
+            scenes={
+                "cue_scene": SceneAudioTiming(
+                    id="cue_scene",
+                    duration_seconds=5.0,
+                    cues=(
+                        AudioCue(start_seconds=2.0, duration_seconds=0.2, text="first"),
+                        AudioCue(start_seconds=2.2, duration_seconds=0.2, text="signal"),
+                        AudioCue(start_seconds=3.5, duration_seconds=0.2, text="detail"),
+                    ),
+                )
+            }
+        ),
+    )
+
+    assert [keyframe.start_time for keyframe in graph.scenes[0].timeline] == [2.0, 2.6]
+
+
 def test_reveal_action_compiles_to_sequential_fade_in_targets() -> None:
     graph = _build_graph(
         {
@@ -551,3 +980,62 @@ def test_one_column_semantic_regions_reject_explicit_main_overlap() -> None:
                 ],
             }
         )
+
+
+def test_flow_animation_moves_a_signal_without_hiding_the_connector() -> None:
+    node = SceneNode(
+        id="path",
+        obj_type=ObjectType.CONNECTOR,
+        rect=Rect(0, 0, 0, 0),
+    )
+    keyframes = [
+        AnimationKeyframe(
+            target_id="path",
+            action=AnimAction.FLOW,
+            start_time=1.0,
+            duration=2.0,
+            easing="linear",
+        )
+    ]
+
+    apply_animations_at_time({"path": node}, keyframes, 2.0)
+
+    assert node.visible is True
+    assert node.draw_progress == 1.0
+    assert node.flow_progress == pytest.approx(0.5)
+
+
+def test_editorial_template_places_headline_left_and_result_right() -> None:
+    graph = _build_graph(
+        {
+            "meta": {"theme": "editorial", "show_subtitles": False},
+            "scenes": [
+                {
+                    "id": "editorial",
+                    "duration": "4s",
+                    "template": "editorial",
+                    "auto_visible": True,
+                    "objects": [
+                        {
+                            "id": "headline",
+                            "type": "text",
+                            "content": "One question",
+                            "style": "heading",
+                            "grid": {"region": "headline"},
+                        },
+                        {
+                            "id": "result",
+                            "type": "text",
+                            "content": "82%",
+                            "style": "metric-warning",
+                            "grid": {"region": "result"},
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+    scene = graph.scenes[0]
+
+    assert scene.node_map["headline"].rect.x < graph.width * 0.15
+    assert scene.node_map["result"].rect.right > graph.width * 0.85

@@ -16,6 +16,7 @@ import tempfile
 import urllib.request
 from collections import defaultdict
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass
 from difflib import SequenceMatcher, get_close_matches
 from pathlib import Path
@@ -35,6 +36,14 @@ from kaivra.mcp.blueprints import (
     dump_document_json,
     infer_slug,
 )
+from kaivra.mcp.story_contract import (
+    StoryContractReport,
+    paired_story_contract_path,
+    parse_creative_capability_requests,
+    story_contract_template,
+    validate_paired_story_contract,
+    validate_story_contract_markdown,
+)
 from kaivra.qa.audit import audit_scene_graph
 from kaivra.render.cairo_renderer import CairoRenderer
 from kaivra.render.orchestration import (
@@ -44,6 +53,7 @@ from kaivra.render.orchestration import (
     resolve_theme_search_roots,
 )
 from kaivra.render.web.exporter import write_web_preview
+from kaivra.scene_graph.timeline import apply_animations_at_time
 from kaivra.themes.registry import (
     get_theme,
     theme_field_names,
@@ -64,6 +74,8 @@ _REDUNDANCY_SEQUENCE_SIMILARITY = 0.78
 _EXPLANATION_MIN_WORDS = 12
 _DOUBLE_REVEAL_OVERLAP_SECONDS = 0.12
 _DOUBLE_REVEAL_HOLD_WINDOW_SECONDS = 0.15
+_PREVIEW_OPACITY_THRESHOLD = 0.05
+_PREVIEW_FRAME_EPSILON_SECONDS = 0.001
 _EXPLANATION_MARKERS = (
     "because",
     "so that",
@@ -243,37 +255,50 @@ class KaivraWorkspace:
         self,
         *,
         topic: str | None = None,
+        capability_requests: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Return a structured questionnaire for the LLM to present to the user
         before creating an animation JSON document."""
+        story_slug = infer_slug(topic or "untitled-explainer") or "untitled-explainer"
+        story_path = f"animations/{story_slug}.story.md"
+        normalized_capability_requests = _normalize_capability_requests(capability_requests)
+        unresolved_capability_requests = [
+            request
+            for request in normalized_capability_requests
+            if request["resolution_status"] == "pending"
+        ]
         return {
             "status": "ok",
             "topic": topic,
             "instructions": (
                 "Present these questions conversationally to the user.  "
-                "Collect their answers, then use them to author the animation "
-                "JSON directly.  Skip questions the user has already answered "
-                "or that are not relevant.  Default narrated explainers to a "
-                "process_explainer shape unless the user clearly wants another pattern.  "
-                "Write narration in clear spoken English that explains the process in user-facing terms.  "
+                "Collect their answers, then translate the user's intention, examples, and constraints "
+                f"into the paired story contract at {story_path} before authoring JSON. "
+                "Skip questions the user has already answered or that are not relevant. Agree on one "
+                "story question and a short beat path before authoring. Treat beats as time intervals inside one evolving "
+                "visual world, not as self-contained slides. One director must own the full spatial and motion continuum. "
+                "Write narration as speech rather than prose: "
+                "it should add meaning instead of reading the screen. "
                 "If the user chooses a voice mode, "
                 "explicitly remind them to mirror on-screen keywords in the narration "
-                "so reveals can line up cleanly."
+                "so reveals can line up cleanly. Inventory the reusable visual primitives "
+                "required by the choreography before JSON authoring."
             ),
             "suggested_meta": {
                 "title": topic or "Untitled Animation",
-                "theme": "modern",
+                "theme": "editorial",
                 "pacing": "balanced",
                 "audience": "mixed",
                 "continuity": True,
                 "show_subtitles": False,
+                "video_bookends": False,
             },
             "draft_defaults": {
                 "audience": "mixed",
                 "detail_level": "educational",
                 "voice_mode": "captions",
-                "pattern": "process_explainer",
-                "theme": "modern",
+                "pattern": "motion_explainer",
+                "theme": "editorial",
                 "num_beats": "auto",
             },
             "questions": [
@@ -343,6 +368,10 @@ class KaivraWorkspace:
                             "value": "local",
                             "label": "Local voice (Sherpa) — free offline TTS narration",
                         },
+                        {
+                            "value": "qwen",
+                            "label": "Local voice (Qwen3-TTS) — natural CoreML narration",
+                        },
                         {"value": "captions", "label": "Captions only — text subtitles, no audio"},
                         {"value": "silent", "label": "Silent — no narration or captions"},
                     ],
@@ -363,6 +392,11 @@ class KaivraWorkspace:
                             "show_subtitles": True,
                             "voice_provider": "local",
                         },
+                        "qwen": {
+                            "include_narration": True,
+                            "show_subtitles": True,
+                            "voice_provider": "qwen",
+                        },
                         "captions": {"include_narration": True, "show_subtitles": True},
                         "silent": {"include_narration": False, "show_subtitles": False},
                     },
@@ -373,12 +407,8 @@ class KaivraWorkspace:
                     "question": "What kind of animation pattern fits best?",
                     "options": [
                         {
-                            "value": "process_explainer",
-                            "label": "Process explainer — why it matters, then state flow, then outcome",
-                        },
-                        {
-                            "value": "visual_explainer",
-                            "label": "Visual explainer — concept-first diagram with narrated beats",
+                            "value": "motion_explainer",
+                            "label": "Motion explainer — one evolving visual world with causal choreography",
                         },
                         {
                             "value": "system_storyboard",
@@ -397,7 +427,7 @@ class KaivraWorkspace:
                             "label": "Before/after comparison — contrasting two approaches",
                         },
                     ],
-                    "default": "process_explainer",
+                    "default": "motion_explainer",
                     "maps_to": "pattern",
                 },
                 {
@@ -406,8 +436,12 @@ class KaivraWorkspace:
                     "question": "Which visual theme would you like?",
                     "options": [
                         {
+                            "value": "editorial",
+                            "label": "Editorial palette — color and typography baseline, not a composition template",
+                        },
+                        {
                             "value": "modern",
-                            "label": "Modern — clean light background with accent colors (default)",
+                            "label": "Modern — card-based product presentation",
                         },
                         {
                             "value": "storyboard_dark",
@@ -422,7 +456,7 @@ class KaivraWorkspace:
                             "label": "Whiteboard — hand-drawn sketch aesthetic",
                         },
                     ],
-                    "default": "modern",
+                    "default": "editorial",
                     "maps_to": "theme",
                 },
                 {
@@ -443,21 +477,116 @@ class KaivraWorkspace:
                 "num_beats": "If user specifies a number, generate that many beat outlines",
             },
             "persistent_state_guidance": [
-                "Prefer document-level persistent objects whenever labels, legends, chapter rails, or shared state carry across scenes.",
-                "Use continuity morphs for scene-local objects that evolve from one beat to the next.",
-                "If a chapter tracker or repeated label appears in more than one scene, try to lift it into top-level objects first.",
+                "Persist story actors and changing values, not presentation chrome, chapter rails, sidebars, legends, or repeated headings.",
+                "Use actor_id, replace, move-to, and continuity morphs so the same thing visibly changes instead of being redrawn on a new slide.",
+                "A top-level object must belong to the causal world. Navigation and repeated labels stay out of the frame unless the viewer truly needs them.",
             ],
             "agent_quickstart": [
-                "If the user has already given enough direction, do not block on every question. Assume the draft defaults and start writing the JSON immediately.",
-                "For narrated explainers, default to process_explainer: show why it matters, then visualize the state flow, then close with the outcome.",
-                "Use template: one-column for straightforward explainers, then add groups for rows, columns, or connector neighborhoods.",
-                "Prefer persistent document-level objects first when labels, chapter rails, legends, or shared state appear in multiple scenes.",
+                "If the user has already given enough direction, do not block on every question. Still create and review the paired story contract before writing JSON.",
+                "Translate the user's intention into a before-and-after learner transformation; examples and proposed numbers are illustrative, not a script.",
+                "Confirm the story question, one transferable mental model, training-versus-prediction boundary, and choreography order before JSON authoring.",
+                "Keep one creative director responsible for the complete timeline. Specialists review story, motion, art direction, and rendering; they do not independently compose disconnected scenes.",
+                "Begin with a choreography map: what actor exists, where it moves, what it becomes, and what the camera-like focus follows across the entire timeline.",
+                "Do not start from editorial, storyboard, one-column, or two-column scene templates. Choose a custom spatial composition from the subject, then use the theme only as a palette and typography baseline.",
+                "Use move-to, replace, draw, flow, scale, and continuity as the explanatory verbs. Fade-in is for entrances, not the main teaching action.",
+                "If the strongest teaching move needs a missing primitive, preserve the creative plan and record it under Creative capability requests instead of substituting a weaker diagram.",
             ],
-            "draft_outline": _planner_draft_outline(topic),
+            "story_contract": {
+                "story_question": f"What should the viewer understand about {topic or 'this topic'} by the end?",
+                "opening_rule": "Begin with a concrete question, tension, surprising value, or visible change—not a welcome screen, slogan, agenda, or announcement of how the topic will be taught.",
+                "mental_model_rule": "Write a familiar causal mental model before technical vocabulary; map each everyday element to the mechanism and say where the analogy stops.",
+                "boundary_rule": "Show what happened earlier, what is fixed now, and what outcome appears after the pass. Do not make learned settings look live or arbitrary.",
+                "causal_reveal_rule": "For every important transition, reveal source and learned rule before the rationale, then the visible action and persistent changed state. Do not show an operation or output before its reason is established.",
+                "beat_rule": "Each beat changes a learner belief through motion in the same visual world. Scene boundaries are render/edit segments, never permission to reset into a title-stage-footer slide.",
+                "ending_rule": "Land on the clearest result or mental model, then stop without a generic recap card.",
+                "human_checkpoint": "Confirm the learner transformation, story question, mental model, causal reveal plan, choreography path, and capability inventory; complete the sound-off, teach-back, counterfactual, and scale-change review gates before JSON authoring begins.",
+                "capability_rule": "The creative director may approve the story with pending requests, but dependent JSON waits until every missing primitive is implemented or a fallback and its product risk are explicitly accepted.",
+                "sidecar_path": story_path,
+                "meta_value": Path(story_path).name,
+                "required_sections": [
+                    "Intent translation and learning transformation",
+                    "Viewer question and promise",
+                    "Audience starting point",
+                    "Concrete entry point",
+                    "Mental model and analogy map",
+                    "Training, prediction, and outcome boundary",
+                    "Prerequisite staircase",
+                    "Causal ledger",
+                    "Causal reveal plan",
+                    "Beat sheet",
+                    "Misconception map",
+                    "Confusion traps",
+                    "Acceptance checks",
+                    "Creative capability requests",
+                ],
+                "template": story_contract_template(topic or "Untitled Explainer"),
+            },
+            "choreography_outline": _planner_choreography_outline(topic),
+            "choreography_review_briefs": _planner_choreography_briefs(topic),
+            "capability_escalation": {
+                "purpose": (
+                    "Keep the approved creative concept intact when it depends on a missing reusable "
+                    "visualization primitive. Record the gap as an implementation request rather than "
+                    "redesigning the story around today's component inventory."
+                ),
+                "creative_approval": {
+                    "separate_from_implementation_readiness": True,
+                    "rule": (
+                        "The creative director may approve the story, choreography, and desired primitive "
+                        "even when implementation readiness is pending; approval does not weaken the concept."
+                    ),
+                },
+                "implementation_readiness": {
+                    "ready_when": (
+                        "Every request is implemented and reviewed, or has an explicitly accepted fallback "
+                        "with its product risk recorded."
+                    ),
+                    "json_authoring_gate": (
+                        "Wait to author JSON that relies on a requested primitive until that request reaches "
+                        "the readiness condition."
+                    ),
+                },
+                "request_fields": [
+                    "id",
+                    "requested_primitive",
+                    "creative_intent",
+                    "story_moment",
+                    "reusable_scope",
+                    "visual_behavior",
+                    "acceptance_tests",
+                    "implementation_context",
+                    "fallback",
+                    "product_risk",
+                    "authorization",
+                    "resolution_status",
+                ],
+                "requests": normalized_capability_requests,
+                "ready_for_json_authoring": not unresolved_capability_requests,
+                "unresolved_request_ids": [
+                    request["id"] for request in unresolved_capability_requests
+                ],
+                "host_orchestrator_guidance": [
+                    "The host orchestrator, not Kaivra, turns each unresolved request into a small reusable implementation brief.",
+                    "Assign one bounded lower-cost implementation agent per missing reusable primitive; do not split one primitive across competing agents.",
+                    "Give that agent the exact acceptance tests, implementation context, visual behavior, and reusable scope from the request.",
+                    "The root orchestrator integrates and reviews the implementation before marking the request implemented.",
+                    "If implementation is declined, record an explicitly accepted fallback and its product risk before allowing JSON authoring to continue.",
+                ],
+                "implementation_briefs": [
+                    _capability_implementation_brief(request)
+                    for request in unresolved_capability_requests
+                    if request["authorization"] == "authorized"
+                ],
+            },
             "narration_assist": {
-                "goal": "Write spoken English that names the same on-screen concepts in the same order as their reveals, and explain the process in plain user-facing language first.",
+                "goal": "Write something a person would naturally say aloud. Narration and on-screen copy should cooperate, not duplicate each other.",
                 "when_voice": [
-                    "Use contractions and direct address instead of title-card prose.",
+                    "Use contractions, varied sentence length, and direct language.",
+                    "Read every line aloud; rewrite anything that sounds like a heading, caption, or documentation paragraph.",
+                    "Do not begin with 'Welcome', 'In this video', or 'Today we will'. Start with the idea.",
+                    "Keep the teaching plan in the story contract, not the narration. Never say 'I'm going to show you', 'we'll walk through', 'let's slow this down', 'we're about to see', or 'first I'll explain'.",
+                    "Do not invent editorial slogans such as 'ONE INPUT · ONE ANSWER' or meta labels such as 'TECHNICAL NAME' and 'KEY TAKEAWAY'. Screen copy must name a real concept, value, or state.",
+                    "Do not narrate visible arithmetic or labels verbatim unless hearing the exact value is necessary.",
                     "Mirror object labels in narration so voice-sync checks can map words to targets.",
                     "For tricky names, add object.spoken_forms aliases before rendering.",
                     "Avoid spelling out filenames, modules, or repo paths in narration unless the user explicitly asked for implementation detail.",
@@ -468,55 +597,31 @@ class KaivraWorkspace:
                     "Prefer 'test runner' over 'harness', 'fix' over 'remediation', and 'queue gets stuck' over 'the daemon stalls'.",
                 ],
             },
-            "reference_examples": [
-                {
-                    "uri": "kaivra://example/perspectiv_medcase_process_explainer",
-                    "why": "Shows the best current quality bar for a narrated process explainer with persistent state and dense topic-specific visuals.",
-                    "excerpt": _reference_example_excerpt(
-                        "perspectiv_medcase_process_explainer.json"
-                    ),
-                },
-                {
-                    "uri": "kaivra://example/api_how_it_works",
-                    "why": "Shows the quality bar for a narrated process explainer with a clear why -> flow -> outcome arc.",
-                    "excerpt": _reference_example_excerpt("api_how_it_works.json"),
-                },
-                {
-                    "uri": "kaivra://example/forward_propagation",
-                    "why": "Shows a deeper educational explainer with continuity carry-over.",
-                    "excerpt": _reference_example_excerpt("forward_propagation.json"),
-                },
-            ],
             "notes": [
                 {
                     "id": "voice_sync_tip",
-                    "when": "voice_mode is 'openai' or 'elevenlabs' or 'local'",
+                    "when": "voice_mode is 'openai', 'elevenlabs', 'local', or 'qwen'",
                     "text": (
                         "Voice sync tip: use the same keywords in narration that appear "
-                        "as on-screen object content or IDs. The engine matches spoken "
-                        "words to animation targets semantically — saying 'the server "
-                        "boots' will sync the reveal to an object with content 'Server'. "
+                        "as on-screen object content or IDs. For a precise reveal, give "
+                        "the animation an explicit cue phrase plus an authored at fallback; "
+                        "the phrase matches contiguous case-folded words after punctuation "
+                        "is removed. Saying 'the server boots' will sync a matching reveal "
+                        "to an object with content 'Server'. "
                         "For tricky brand names or acronyms, add object.spoken_forms like "
                         "['co pilot', 'cobalt'] so checks and cue matching still recognize "
-                        "the intended target. ElevenLabs uses word-level cues; OpenAI and "
-                        "local (Sherpa) use scene-level timing with the same semantic checks."
+                        "the intended target. Providers with no native word cues receive "
+                        "deterministic estimated word timing, so the same cue contract works "
+                        "for OpenAI, ElevenLabs, local Sherpa, and local Qwen voice."
                     ),
                 },
                 {
-                    "id": "process_default_tip",
+                    "id": "motion_direction_tip",
                     "when": "always",
                     "text": (
-                        "Default to process_explainer for narrated work: start with the user-facing problem, "
-                        "then visualize how state moves through the system, and close with the outcome or mental model."
-                    ),
-                },
-                {
-                    "id": "example_fetch_tip",
-                    "when": "always",
-                    "text": (
-                        "If your MCP client only shows resource descriptors first, call resources/read "
-                        "on kaivra://example/perspectiv_medcase_process_explainer or "
-                        "kaivra://example/api_how_it_works to fetch the full JSON example body."
+                        "Default to a motion_explainer. Build one continuous visual world, give every movement a causal job, "
+                        "and let the subject determine composition. A sequence of headings, cards, and fades is a blocked draft, "
+                        "even when every individual frame is clean."
                     ),
                 },
             ],
@@ -532,6 +637,167 @@ class KaivraWorkspace:
             },
         }
 
+    def create_story_contract(
+        self,
+        *,
+        animation_path: str,
+        markdown: str | None = None,
+    ) -> dict[str, Any]:
+        """Create or update the paired Markdown story contract for an animation.
+
+        Supplying no Markdown writes the intentional template. It remains a draft
+        until every required section is completed, which the preview/render
+        preflight verifies for layperson explainers.
+        """
+        resolved_animation = self.resolve_path(animation_path)
+        if resolved_animation.suffix.lower() not in {".json", ".yaml", ".yml"}:
+            raise ValueError("animation_path must name a JSON or YAML animation document.")
+
+        contract_path = paired_story_contract_path(resolved_animation)
+        content = (
+            markdown if markdown is not None else story_contract_template(resolved_animation.stem)
+        )
+        validation_errors = validate_story_contract_markdown(content)
+        creative_review = parse_creative_capability_requests(content)
+        contract_path.parent.mkdir(parents=True, exist_ok=True)
+        contract_path.write_text(content.rstrip() + "\n", encoding="utf-8")
+
+        if validation_errors:
+            status = "draft"
+            next_step = "Complete and review every required story-contract section."
+        elif creative_review.readiness != "ready":
+            status = "capability_pending"
+            next_step = (
+                "Keep the creative approval intact. Give each authorized pending capability "
+                "to one bounded implementation agent, integrate and verify it, then mark it "
+                "implemented; alternatively record an explicitly accepted fallback and product risk."
+            )
+        else:
+            status = "ok"
+            next_step = (
+                "Set meta.story_contract to "
+                f"'{contract_path.name}', review the completed contract, then author the JSON from its beat sheet."
+            )
+
+        return {
+            "status": status,
+            "animation_path": str(resolved_animation),
+            "story_contract_path": str(contract_path),
+            "meta_value": contract_path.name,
+            "story_contract_markdown": content.rstrip() + "\n",
+            "validation_errors": list(validation_errors),
+            "creative_verdict": creative_review.verdict,
+            "creative_readiness": creative_review.readiness,
+            "ready_for_authoring": not validation_errors and creative_review.readiness == "ready",
+            "capability_requests": [request.to_dict() for request in creative_review.requests],
+            "next_step": next_step,
+        }
+
+    @staticmethod
+    def _story_contract_is_required(doc: Any) -> bool:
+        """Return whether this document opts into the paired contract gate."""
+        audience = getattr(doc.meta.audience, "value", doc.meta.audience)
+        return audience == "layperson" or bool(doc.meta.story_contract)
+
+    def _story_contract_report(
+        self,
+        doc: Any,
+        resolved_path: Path | None,
+    ) -> StoryContractReport | None:
+        if resolved_path is None or not self._story_contract_is_required(doc):
+            return None
+        return validate_paired_story_contract(
+            resolved_path,
+            doc.meta.story_contract,
+            require_declaration=getattr(doc.meta.audience, "value", doc.meta.audience)
+            == "layperson",
+        )
+
+    @staticmethod
+    def _raw_story_contract_warning(doc: Any) -> str | None:
+        """Explain why raw JSON cannot prove its companion-file contract."""
+        if not KaivraWorkspace._story_contract_is_required(doc):
+            return None
+        if doc.meta.story_contract:
+            return (
+                "STORY_CONTRACT: Cannot verify meta.story_contract from raw dsl_json. "
+                "Save the animation and its paired .story.md file, then run check_animation with file_path "
+                "before previewing or rendering."
+            )
+        return (
+            "STORY_CONTRACT: A layperson explainer needs a paired <slug>.story.md file and "
+            "meta.story_contract before previewing or rendering."
+        )
+
+    @staticmethod
+    def _story_contract_check_failure(
+        doc: Any,
+        resolved_path: Path,
+        report: StoryContractReport,
+    ) -> dict[str, Any]:
+        blocking = [
+            f"ERROR document story_contract: {error}"
+            for error in KaivraWorkspace._story_contract_blocking_messages(report)
+        ]
+        return {
+            "valid": False,
+            "summary": _check_summary(blocking_count=len(blocking), warning_count=0),
+            "blocking_issues": blocking,
+            "warnings": [],
+            "audit_findings": blocking,
+            "structured_findings": [],
+            "finding_groups": {
+                "blocking": blocking,
+                "quality": [],
+                "voice_sync": [],
+                "continuity": [],
+            },
+            "narration_timing": [],
+            "normalized_dsl_json": dump_document_json(doc),
+            "recommended_edits": _recommend_edits_from_messages(blocking),
+            "applied_fixes": [],
+            "file_path": str(resolved_path),
+            "story_contract": report.to_dict(),
+        }
+
+    @staticmethod
+    def _story_contract_blocking_messages(report: StoryContractReport) -> list[str]:
+        """Return structural and capability-readiness blockers for authoring/rendering."""
+        messages = list(report.errors)
+        if report.valid and not report.ready_for_authoring:
+            pending = [
+                request
+                for request in report.creative_capability_requests
+                if request.implementation_status == "pending"
+            ]
+            for request in pending:
+                if request.authorization == "not authorized":
+                    messages.append(
+                        f"Creative capability request {request.id!r} needs implementation authorization "
+                        "or an explicitly accepted fallback with product risk."
+                    )
+                else:
+                    messages.append(
+                        f"Creative capability request {request.id!r} is approved but still pending "
+                        f"implementation of {request.missing_reusable_capability!r}."
+                    )
+            if not pending:
+                messages.append(
+                    "Creative capability review is not ready for authoring; record either "
+                    "'No missing capabilities.' or resolved capability requests."
+                )
+        return messages
+
+    def _require_valid_story_contract(self, doc: Any, resolved_path: Path) -> StoryContractReport:
+        """Raise before preview/render when a required contract is not ready."""
+        report = self._story_contract_report(doc, resolved_path)
+        if report is None:
+            return StoryContractReport(resolved_path, None)
+        if not report.ready_for_authoring:
+            details = " ".join(self._story_contract_blocking_messages(report))
+            raise ValueError(f"Story contract preflight failed: {details}")
+        return report
+
     def add_theme(
         self,
         *,
@@ -544,7 +810,7 @@ class KaivraWorkspace:
         if not chosen_name:
             raise ValueError("Theme names cannot be empty.")
 
-        base = self._resolve_theme(base_theme or "modern")
+        base = self._resolve_theme(base_theme or "editorial")
         raw_theme = base.to_dict()
         raw_theme.update(overrides or {})
         raw_theme["name"] = chosen_name
@@ -560,7 +826,7 @@ class KaivraWorkspace:
             "theme_json": json.dumps(theme.to_dict(), indent=2),
             "supported_fields": theme_field_names(),
             "next_step": (
-                f"Use theme: {chosen_name} when authoring JSON directly, "
+                f"Use theme: {chosen_name} after approving the story contract, "
                 f"or set meta.theme to {chosen_name} in an existing document."
             ),
         }
@@ -592,6 +858,13 @@ class KaivraWorkspace:
                 "recommended_edits": _recommend_edits_from_messages([str(exc)]),
                 "file_path": str(self.resolve_path(file_path)) if file_path else None,
             }
+
+        story_contract_report = self._story_contract_report(doc, resolved_path)
+        if story_contract_report is not None and not story_contract_report.ready_for_authoring:
+            return self._story_contract_check_failure(doc, resolved_path, story_contract_report)
+        raw_story_contract_warning = (
+            self._raw_story_contract_warning(doc) if resolved_path is None else None
+        )
 
         try:
             theme_roots = self._theme_roots_for_document(resolved_path)
@@ -649,6 +922,13 @@ class KaivraWorkspace:
         drift = version_drift_warning(doc.version)
         if drift:
             warnings.insert(0, f"VERSION: {drift}")
+        if raw_story_contract_warning:
+            warnings.append(raw_story_contract_warning)
+            findings.append(raw_story_contract_warning)
+
+        finding_groups = _group_serialized_findings(raw_findings)
+        if raw_story_contract_warning:
+            finding_groups["quality"].append(raw_story_contract_warning)
 
         if write_back:
             resolved_path.write_text(normalized + "\n", encoding="utf-8")
@@ -660,12 +940,15 @@ class KaivraWorkspace:
             "warnings": warnings,
             "audit_findings": findings,
             "structured_findings": [finding.to_dict() for finding in raw_findings],
-            "finding_groups": _group_serialized_findings(raw_findings),
+            "finding_groups": finding_groups,
             "narration_timing": narration_timing,
             "normalized_dsl_json": normalized,
             "recommended_edits": recommended_edits,
             "applied_fixes": applied_fixes,
             "file_path": str(resolved_path) if resolved_path else None,
+            "story_contract": (
+                story_contract_report.to_dict() if story_contract_report is not None else None
+            ),
         }
 
     def preview_animation(
@@ -674,8 +957,9 @@ class KaivraWorkspace:
         file_path: str,
         output_name: str | None = None,
     ) -> dict[str, Any]:
-        """Write a preview HTML file and first-frame PNG to the workspace."""
+        """Write a preview HTML file and representative PNG to the workspace."""
         doc, resolved_path = self._load_document(file_path=file_path)
+        story_contract_report = self._require_valid_story_contract(doc, resolved_path)
         base_name = infer_slug(output_name or resolved_path.stem)
         output_paths = self._workspace_paths_for_document(resolved_path)
 
@@ -696,14 +980,17 @@ class KaivraWorkspace:
             theme_search_roots=theme_roots,
             timing_config=timing_config,
         )
+        preview_time_seconds = _select_representative_preview_time(graph)
         renderer = CairoRenderer(theme)
-        renderer.render_frame_to_file(graph, 0.0, str(png_path))
+        renderer.render_frame_to_file(graph, preview_time_seconds, str(png_path))
 
         return {
             "status": "ok",
             "html_path": str(html_path),
             "preview_image_path": str(png_path),
+            "preview_time_seconds": round(preview_time_seconds, 3),
             "source_file_path": str(resolved_path),
+            "story_contract": story_contract_report.to_dict(),
         }
 
     def render_animation(
@@ -725,6 +1012,7 @@ class KaivraWorkspace:
             raise ValueError("format must be one of: png, mp4, webm.")
 
         doc, resolved_path = self._load_document(file_path=file_path)
+        story_contract_report = self._require_valid_story_contract(doc, resolved_path)
         audio_abs = self._resolve_existing_path(audio_path) if audio_path else None
         audio_timings_abs = (
             self._resolve_existing_path(audio_timings_path) if audio_timings_path else None
@@ -761,6 +1049,7 @@ class KaivraWorkspace:
             "warnings": list(result.warnings),
             "retimed_document_path": result.retimed_document_path,
             "source_file_path": str(resolved_path),
+            "story_contract": story_contract_report.to_dict(),
         }
 
     def validate_voice_setup(self, *, voice_provider: str | None) -> str:
@@ -980,7 +1269,7 @@ class KaivraWorkspace:
                     title="Doctor Smoke Test",
                     pattern="algorithm_walkthrough",
                     beats=["Goal: Verify the local Kaivra install."],
-                    theme="modern",
+                    theme="editorial",
                     audience=None,
                     include_narration=False,
                 )
@@ -1206,12 +1495,12 @@ def _voice_sync_findings(
 ) -> list[CheckFinding]:
     """Check that narration keywords overlap with animation target content.
 
-    These warnings are useful for every provider: ElevenLabs gets more precise
-    cue alignment, while OpenAI and local renders still benefit from narration
-    that names the same concepts in the same order as the visuals.
+    These warnings are useful for every provider: native provider cues are most
+    precise, while providers without them use estimated word windows and still
+    need explicit phrases in the same order as the visuals.
     """
     findings: list[CheckFinding] = []
-    sync_actions = REVEAL_ACTIONS | EMPHASIS_ACTIONS
+    sync_actions = REVEAL_ACTIONS | EMPHASIS_ACTIONS | {"reveal", "reveal-children"}
 
     for scene_spec in doc.scenes:
         narration = getattr(scene_spec, "narration", None)
@@ -1232,7 +1521,8 @@ def _voice_sync_findings(
             continue
 
         seen_targets: set[tuple[str, str, str]] = set()
-        for anim in scene_spec.animations or []:
+        ordered_events: list[tuple[tuple[float, int, int], int, str]] = []
+        for animation_index, anim in enumerate(scene_spec.animations or []):
             action = anim.action if hasattr(anim, "action") else None
             if action not in sync_actions:
                 continue
@@ -1241,7 +1531,32 @@ def _voice_sync_findings(
                 continue
 
             targets = anim.target if isinstance(anim.target, list) else [anim.target]
-            for target_id in targets:
+            if action_value == "reveal-children" and isinstance(anim.target, str):
+                group_meta = object_meta.get(anim.target, {})
+                text_children = group_meta.get("text_children") or []
+                if len(text_children) > 1:
+                    findings.append(
+                        CheckFinding(
+                            severity="warning",
+                            scene_id=scene_id,
+                            kind="voice_sync_grouped_reveal",
+                            message=(
+                                f"Group `{anim.target}` reveals {len(text_children)} text items as one "
+                                "voice event. Reveal them individually with explicit `cue` phrases so "
+                                "their visual order can follow the narration."
+                            ),
+                            recommended_edit=RecommendedEdit(
+                                scene_id=scene_id,
+                                action="split_voice_reveals",
+                                object_id=anim.target,
+                                field="animations",
+                                suggested_value=None,
+                                reason="Grouped text reveals cannot be aligned independently to speech.",
+                            ),
+                        )
+                    )
+
+            for target_index, target_id in enumerate(targets):
                 if target_id is None:
                     continue
                 target_key = (scene_id, action_value, target_id)
@@ -1259,7 +1574,22 @@ def _voice_sync_findings(
                 content = content_index.get(target_id, "")
                 if not content:
                     continue
-                score = _semantic_score(narration, content)
+                cue_phrase = getattr(anim, "cue", None)
+                spoken_target = (
+                    cue_phrase
+                    if isinstance(cue_phrase, str) and cue_phrase.strip()
+                    else object_meta.get(target_id, {}).get("content", "")
+                )
+                narration_position = _narration_phrase_position(narration, spoken_target)
+                if narration_position is not None:
+                    ordered_events.append(
+                        (
+                            _authored_voice_order(anim, animation_index, target_index),
+                            narration_position,
+                            target_id,
+                        )
+                    )
+                score = _semantic_score(narration, spoken_target)
                 if score == 0:
                     target_terms = [
                         token
@@ -1292,16 +1622,24 @@ def _voice_sync_findings(
                         message = (
                             f"{action_value} targeting '{target_id}' "
                             f"(content: '{content.strip()}') has no keyword match "
-                            f"in narration — OpenAI voice keeps scene-level timing, so the "
-                            f"beat may feel less intentional unless the narration names the same concept."
+                            f"in narration — OpenAI voice will estimate word timing, but this "
+                            f"beat may match positionally unless you add an explicit `cue` phrase."
+                            f"{detail_suffix}"
+                        )
+                    elif voice_provider == "qwen":
+                        message = (
+                            f"{action_value} targeting '{target_id}' "
+                            f"(content: '{content.strip()}') has no keyword match "
+                            f"in narration — Qwen voice will estimate word timing, but this "
+                            f"beat may match positionally unless you add an explicit `cue` phrase."
                             f"{detail_suffix}"
                         )
                     else:
                         message = (
                             f"{action_value} targeting '{target_id}' "
                             f"(content: '{content.strip()}') has no keyword match "
-                            f"in narration — local voice keeps scene-level timing, but the "
-                            f"beat may feel less intentional unless the narration names the same concept."
+                            f"in narration — local voice will estimate word timing, but this "
+                            f"beat may match positionally unless you add an explicit `cue` phrase."
                             f"{detail_suffix}"
                         )
                     findings.append(
@@ -1313,7 +1651,77 @@ def _voice_sync_findings(
                         )
                     )
 
+        visually_ordered = sorted(ordered_events, key=lambda event: event[0])
+        for previous, current in zip(visually_ordered, visually_ordered[1:]):
+            if current[1] >= previous[1]:
+                continue
+            findings.append(
+                CheckFinding(
+                    severity="warning",
+                    scene_id=scene_id,
+                    kind="voice_sync_order",
+                    message=(
+                        f"Visual `{current[2]}` is authored after `{previous[2]}`, but its words "
+                        "occur earlier in narration. Reorder the reveals or add explicit `cue` phrases."
+                    ),
+                    recommended_edit=RecommendedEdit(
+                        scene_id=scene_id,
+                        action="reorder_voice_reveals",
+                        object_id=current[2],
+                        field="animations",
+                        suggested_value=None,
+                        reason="Visual event order should follow spoken order.",
+                    ),
+                )
+            )
+            break
+
     return findings
+
+
+def _authored_voice_order(
+    anim: Any,
+    animation_index: int,
+    target_index: int,
+) -> tuple[float, int, int]:
+    """Return stable authored order without pretending cue-only events start at zero."""
+    authored_at = getattr(anim, "at", None)
+    start_seconds = _safe_authored_start_seconds(authored_at, fallback=float(animation_index))
+    return (start_seconds, animation_index, target_index)
+
+
+def _safe_authored_start_seconds(value: str | None, *, fallback: float) -> float:
+    """Best-effort time for advisory checks that only have unresolved authoring data.
+
+    The renderer resolves semantic timing tokens such as ``short`` against the
+    document timing configuration.  The voice-order and double-reveal audits
+    use this value only as a stable ordering hint, so they must not fail a
+    valid document merely because that configuration is not available here.
+    """
+    if not value:
+        return fallback
+    try:
+        return parse_duration(value)
+    except ValueError:
+        return fallback
+
+
+def _narration_phrase_position(narration: str, phrase: str) -> int | None:
+    """Find the first spoken position represented by a target or explicit cue phrase."""
+    narration_tokens = _tokenize_for_overlap(narration)
+    phrase_tokens = [token for token in _tokenize_for_overlap(phrase) if len(token) >= 2]
+    if not narration_tokens or not phrase_tokens:
+        return None
+
+    phrase_length = len(phrase_tokens)
+    for index in range(len(narration_tokens) - phrase_length + 1):
+        if narration_tokens[index : index + phrase_length] == phrase_tokens:
+            return index
+
+    positions = [
+        narration_tokens.index(token) for token in phrase_tokens if token in narration_tokens
+    ]
+    return min(positions) if positions else None
 
 
 def _audit_document(
@@ -1375,7 +1783,13 @@ def _audit_document_report(
         in_scope_refs = persistent_refs + scene_refs
         in_scope_ids = _available_ids(in_scope_refs)
 
-        findings.extend(_scene_duration_findings(scene_spec=scene_spec, scene=resolved_scene))
+        findings.extend(
+            _scene_duration_findings(
+                scene_spec=scene_spec,
+                scene=resolved_scene,
+                pacing=getattr(doc.meta, "pacing", None),
+            )
+        )
         findings.extend(
             _narration_findings(
                 scene_spec=scene_spec,
@@ -1397,6 +1811,13 @@ def _audit_document_report(
                 scene_spec=scene_spec,
                 resolved_scene=resolved_scene,
                 scene_refs=in_scope_refs,
+            )
+        )
+        findings.extend(
+            _editorial_copy_findings(
+                scene_id=resolved_scene.id,
+                scene_refs=in_scope_refs,
+                theme_name=getattr(doc.meta, "theme", ""),
             )
         )
         findings.extend(
@@ -1427,6 +1848,7 @@ def _audit_document_report(
             )
         )
 
+    findings.extend(_slideshow_composition_findings(doc.scenes))
     findings.extend(_repetitive_scaffold_findings(doc.scenes))
     findings.extend(_continuity_content_findings(doc))
 
@@ -1485,8 +1907,30 @@ def _layout_audit_findings(graph: Any) -> list[CheckFinding]:
     return findings
 
 
-def _scene_duration_findings(*, scene_spec: Any, scene: Any) -> list[CheckFinding]:
+def _scene_duration_findings(
+    *, scene_spec: Any, scene: Any, pacing: Any = None
+) -> list[CheckFinding]:
     findings: list[CheckFinding] = []
+    pacing_value = getattr(pacing, "value", pacing)
+    max_scene_duration = 45.0 if pacing_value == "educational" else _MAX_SCENE_DURATION_SECONDS
+    timeline = list(getattr(scene, "timeline", []))
+    causal_motion_actions = {"draw", "flow", "move", "move-to", "replace", "scale"}
+    causal_motion = [
+        keyframe
+        for keyframe in timeline
+        if getattr(getattr(keyframe, "action", None), "value", keyframe.action)
+        in causal_motion_actions
+    ]
+    # A long, single visual world can be the antidote to slide-like resets. Do
+    # not force it into arbitrary 45-second scenes when causal motion continues
+    # throughout the authored interval at a useful teaching cadence.
+    long_continuous_choreography = bool(
+        pacing_value == "educational"
+        and scene.duration > max_scene_duration
+        and len(causal_motion) >= max(4, math.ceil(scene.duration / 15.0))
+        and max((keyframe.start_time for keyframe in causal_motion), default=0.0)
+        >= scene.duration * 0.75
+    )
     if scene.duration < _MIN_SCENE_DURATION_SECONDS:
         findings.append(
             CheckFinding(
@@ -1507,7 +1951,7 @@ def _scene_duration_findings(*, scene_spec: Any, scene: Any) -> list[CheckFindin
                 ),
             )
         )
-    if scene.duration > _MAX_SCENE_DURATION_SECONDS:
+    if scene.duration > max_scene_duration and not long_continuous_choreography:
         findings.append(
             CheckFinding(
                 severity="warning",
@@ -1515,20 +1959,23 @@ def _scene_duration_findings(*, scene_spec: Any, scene: Any) -> list[CheckFindin
                 kind="pacing",
                 message=(
                     f"Scene lasts {scene.duration:.1f}s, which is longer than the recommended "
-                    f"{_MAX_SCENE_DURATION_SECONDS:.0f}s maximum."
+                    f"{max_scene_duration:.0f}s maximum for {pacing_value or 'balanced'} pacing."
                 ),
                 recommended_edit=RecommendedEdit(
                     scene_id=scene.id,
                     action="retime_scene",
                     object_id=None,
                     field="duration",
-                    suggested_value=_format_duration_value(_MAX_SCENE_DURATION_SECONDS),
-                    reason="Long scenes are often easier to follow when split into tighter beats.",
+                    suggested_value=_format_duration_value(max_scene_duration),
+                    reason=(
+                        "This movement exceeds the selected pacing envelope. Tighten the narration "
+                        "or split only where the visual world has a genuine change of focus."
+                    ),
                 ),
             )
         )
     max_timeline_end = max(
-        (keyframe.start_time + keyframe.duration for keyframe in getattr(scene, "timeline", [])),
+        (keyframe.start_time + keyframe.duration for keyframe in timeline),
         default=0.0,
     )
     if (
@@ -1663,6 +2110,63 @@ def _narration_findings(
         return []
 
     findings: list[CheckFinding] = []
+    written_intro = re.match(
+        r"^(welcome\b|in this (video|animation)\b|today (we|you)\b|this (video|animation) (will|is going to)\b)",
+        narration,
+        flags=re.IGNORECASE,
+    )
+    if written_intro:
+        findings.append(
+            CheckFinding(
+                severity="warning",
+                scene_id=resolved_scene.id,
+                kind="spoken_narration",
+                message=(
+                    "Narration opens like a presentation script. Start with the idea, question, "
+                    "tension, or visible change instead of announcing the video."
+                ),
+                recommended_edit=RecommendedEdit(
+                    scene_id=resolved_scene.id,
+                    action="rewrite_for_speech",
+                    object_id=None,
+                    field="narration",
+                    suggested_value=None,
+                    reason="Natural spoken narration should sound like explanation, not an agenda slide.",
+                ),
+            )
+        )
+    self_declarative = re.search(
+        r"\b(?:"
+        r"(?:i(?:'m| am|\s*’m| will|'ll|\s*’ll)|we(?:'re| are|'ll| will|\s*’re|\s*’ll))\s+"
+        r"(?:going to\s+)?(?:show|teach|explain|cover|unpack|break down|walk through|go through|follow)"
+        r"|let(?:'s| us|\s*’s)\s+(?:slow\s+(?:this|that|it)\s+down|unpack|break\s+(?:this|that|it)\s+down|walk through|go through)"
+        r")\b",
+        narration,
+        flags=re.IGNORECASE,
+    )
+    if self_declarative and not written_intro:
+        findings.append(
+            CheckFinding(
+                severity="warning",
+                scene_id=resolved_scene.id,
+                kind="spoken_narration",
+                message=(
+                    "Narration announces the teaching process instead of speaking directly about "
+                    "the subject. Keep planning and pacing decisions in the story contract."
+                ),
+                recommended_edit=RecommendedEdit(
+                    scene_id=resolved_scene.id,
+                    action="rewrite_for_speech",
+                    object_id=None,
+                    field="narration",
+                    suggested_value=None,
+                    reason=(
+                        "Remove phrases such as 'we'll walk through' or 'let's slow this down' "
+                        "and begin the sentence with the actual idea, cause, or question."
+                    ),
+                ),
+            )
+        )
     read_time = _estimate_read_time_seconds(narration)
     if (
         read_time > resolved_scene.duration * _NARRATION_OVERAGE_RATIO
@@ -1752,7 +2256,10 @@ def _audience_narration_findings(
 
     lowered = narration.lower()
     for term in sorted(_LAYPERSON_JARGON):
-        if term in lowered:
+        # Match complete terms, including multiword phrases, rather than
+        # substrings inside ordinary words such as capital, portfolio,
+        # supporting, or reporting.
+        if re.search(rf"(?<!\w){re.escape(term)}(?!\w)", lowered):
             matched_terms.append(term)
 
     deduped_terms = [term for term in dict.fromkeys(matched_terms) if term]
@@ -1840,6 +2347,51 @@ def _explanatory_narration_findings(
             ),
         )
     ]
+
+
+def _editorial_copy_findings(
+    *,
+    scene_id: str,
+    scene_refs: list[ObjectRef],
+    theme_name: str,
+) -> list[CheckFinding]:
+    """Keep editorial frames visual: narration explains, labels identify."""
+    if theme_name != "editorial":
+        return []
+
+    findings: list[CheckFinding] = []
+    headline_styles = {"hero-heading", "heading", "section-heading"}
+    for ref in scene_refs:
+        spec = ref.spec
+        object_type = getattr(spec, "type", None)
+        object_type = getattr(object_type, "value", object_type)
+        content = (getattr(spec, "content", None) or "").strip()
+        style = getattr(spec, "style", None)
+        if object_type != "text" or style not in headline_styles or not content:
+            continue
+        word_count = len(re.findall(r"\b[\w'-]+\b", content))
+        if word_count < 7 and not re.search(r"[.!?]\s*$", content):
+            continue
+        findings.append(
+            CheckFinding(
+                severity="warning",
+                scene_id=scene_id,
+                kind="screen_prose",
+                message=(
+                    f"Editorial heading `{ref.object_id}` reads like narration: {content!r}. "
+                    "Use a short label, value, or symbol and let the voice explain the idea."
+                ),
+                recommended_edit=RecommendedEdit(
+                    scene_id=scene_id,
+                    action="shorten_on_screen_copy",
+                    object_id=ref.object_id,
+                    field=f"{ref.path}.content",
+                    suggested_value=None,
+                    reason="Editorial frames should show the mechanism instead of restating speech.",
+                ),
+            )
+        )
+    return findings
 
 
 def _scene_reference_findings(
@@ -2062,7 +2614,134 @@ def _scene_reference_findings(
                 )
             )
 
+        if anim.action.value == "flow":
+            findings.extend(
+                _flow_animation_findings(
+                    scene_id=scene_id,
+                    scene_index=scene_index,
+                    animation_index=animation_index,
+                    targets=targets,
+                    object_map=object_map,
+                    timeline=resolved_scene.timeline,
+                )
+            )
+
     return findings
+
+
+def _flow_animation_findings(
+    *,
+    scene_id: str,
+    scene_index: int,
+    animation_index: int,
+    targets: list[str],
+    object_map: dict[str, Any],
+    timeline: list[Any],
+) -> list[CheckFinding]:
+    """Ensure signal flow runs on an established connector path."""
+    findings: list[CheckFinding] = []
+    at_path = f"scenes[{scene_index}].animations[{animation_index}].at"
+    target_path = f"scenes[{scene_index}].animations[{animation_index}].target"
+
+    for target_id in targets:
+        target = object_map.get(target_id)
+        if target is None:
+            # The ordinary reference check already reports the missing ID.
+            continue
+        target_type = getattr(getattr(target, "type", None), "value", getattr(target, "type", None))
+        if target_type != ObjectType.CONNECTOR.value:
+            findings.append(
+                CheckFinding(
+                    severity="error",
+                    scene_id=scene_id,
+                    kind="flow_target",
+                    message=(
+                        f"Animation {animation_index} uses `flow` on `{target_id}`, but `flow` only "
+                        "accepts connector targets."
+                    ),
+                    recommended_edit=RecommendedEdit(
+                        scene_id=scene_id,
+                        action="replace_target",
+                        object_id=target_id,
+                        field=target_path,
+                        suggested_value=None,
+                        reason="Use `flow` to move a signal along a connector after the connector is drawn.",
+                    ),
+                )
+            )
+            continue
+
+        flow_keyframes = sorted(
+            (
+                keyframe
+                for keyframe in timeline
+                if _timeline_action_value(keyframe) == "flow" and keyframe.target_id == target_id
+            ),
+            key=lambda keyframe: keyframe.start_time,
+        )
+        draw_keyframes = sorted(
+            (
+                keyframe
+                for keyframe in timeline
+                if _timeline_action_value(keyframe) == "draw" and keyframe.target_id == target_id
+            ),
+            key=lambda keyframe: keyframe.start_time,
+        )
+
+        for flow_keyframe in flow_keyframes:
+            preceding_draws = [
+                draw for draw in draw_keyframes if draw.start_time <= flow_keyframe.start_time
+            ]
+            if not preceding_draws:
+                findings.append(
+                    CheckFinding(
+                        severity="warning",
+                        scene_id=scene_id,
+                        kind="flow_timing",
+                        message=(
+                            f"`flow` on connector `{target_id}` starts at {flow_keyframe.start_time:.2f}s "
+                            "before that connector has been drawn."
+                        ),
+                        recommended_edit=RecommendedEdit(
+                            scene_id=scene_id,
+                            action="add_or_retime_draw",
+                            object_id=target_id,
+                            field=at_path,
+                            suggested_value=None,
+                            reason="Draw the connector first, then start the flow once the path is visible.",
+                        ),
+                    )
+                )
+                continue
+
+            draw_keyframe = preceding_draws[-1]
+            draw_end = draw_keyframe.start_time + draw_keyframe.duration
+            if flow_keyframe.start_time + _PREVIEW_FRAME_EPSILON_SECONDS < draw_end:
+                findings.append(
+                    CheckFinding(
+                        severity="warning",
+                        scene_id=scene_id,
+                        kind="flow_timing",
+                        message=(
+                            f"`flow` on connector `{target_id}` starts at {flow_keyframe.start_time:.2f}s "
+                            f"before its `draw` completes at {draw_end:.2f}s."
+                        ),
+                        recommended_edit=RecommendedEdit(
+                            scene_id=scene_id,
+                            action="retime_flow",
+                            object_id=target_id,
+                            field=at_path,
+                            suggested_value=_format_duration_value(draw_end),
+                            reason="Let the connector finish drawing before its signal begins moving.",
+                        ),
+                    )
+                )
+
+    return findings
+
+
+def _timeline_action_value(keyframe: Any) -> str:
+    return getattr(getattr(keyframe, "action", None), "value", getattr(keyframe, "action", ""))
 
 
 def _scene_visibility_findings(
@@ -2204,13 +2883,119 @@ def _repetitive_scaffold_findings(scene_specs: list[Any]) -> list[CheckFinding]:
                         field="scenes",
                         suggested_value=None,
                         reason=(
-                            "Replace repeated scaffold cards with topic-specific values, states, and connectors "
-                            "so each beat has its own visual structure."
+                            "Establish the story actors once, then let them move, transform, and carry state "
+                            "through one continuous visual world."
                         ),
                     ),
                 )
             )
         run_start = run_end
+    return findings
+
+
+def _slideshow_composition_findings(scene_specs: list[Any]) -> list[CheckFinding]:
+    """Flag narrated page grammar and decoration-only animation.
+
+    Templates remain valid compatibility features, but repeated framing in a
+    narrated piece is almost always a slide deck masquerading as animation.
+    """
+    framed_scene_ids: list[str] = []
+    findings: list[CheckFinding] = []
+    presentation_id_terms = ("heading", "header", "footer", "stage", "badge", "chapter", "rail")
+    causal_actions = {"move", "move-to", "swap", "draw", "flow", "build", "replace"}
+
+    for index, scene_spec in enumerate(scene_specs):
+        narration = (getattr(scene_spec, "narration", None) or "").strip()
+        if not narration:
+            continue
+        scene_id = getattr(scene_spec, "id", None) or f"scene_{index}"
+        refs = _collect_object_refs(getattr(scene_spec, "objects", None) or [], prefix="objects")
+        template = (getattr(scene_spec, "template", None) or "").strip().lower()
+        heading_count = sum(
+            1
+            for ref in refs
+            if (
+                (getattr(ref.spec, "style", None) or "").strip().lower()
+                in {"hero-heading", "heading", "section-heading"}
+                or (
+                    ref.object_id
+                    and any(term in ref.object_id.lower() for term in ("heading", "header"))
+                )
+            )
+        )
+        container_count = sum(
+            1
+            for ref in refs
+            if getattr(ref.spec, "type", None)
+            in {ObjectType.BOX, ObjectType.TOKEN, ObjectType.CALLOUT, ObjectType.GROUP}
+        )
+        presentation_id_count = sum(
+            1
+            for ref in refs
+            if ref.object_id
+            and any(term in ref.object_id.lower() for term in presentation_id_terms)
+        )
+        if template in {"editorial", "storyboard", "one-column", "two-column"} or (
+            container_count >= 3
+            and presentation_id_count >= 2
+            and (heading_count >= 1 or presentation_id_count >= 3)
+        ):
+            framed_scene_ids.append(scene_id)
+
+        actions = {
+            getattr(getattr(animation, "action", None), "value", "")
+            for animation in (getattr(scene_spec, "animations", None) or [])
+        }
+        if actions & {"highlight", "pulse"} and not actions & causal_actions:
+            findings.append(
+                CheckFinding(
+                    severity="warning",
+                    scene_id=scene_id,
+                    kind="decorative_motion",
+                    message=(
+                        f"Scene `{scene_id}` uses pulse or highlight without a causal state-change "
+                        "animation. Decoration is carrying the motion instead of the explanation."
+                    ),
+                    recommended_edit=RecommendedEdit(
+                        scene_id=scene_id,
+                        action="replace_decorative_motion",
+                        object_id=None,
+                        field=f"scenes[{index}].animations",
+                        suggested_value=None,
+                        reason=(
+                            "Remove ornamental emphasis and show the actual cause with move-to, "
+                            "replace, draw, flow, build, or another visible state change."
+                        ),
+                    ),
+                )
+            )
+
+    if len(framed_scene_ids) >= 2:
+        findings.append(
+            CheckFinding(
+                severity="warning",
+                scene_id=framed_scene_ids[0],
+                kind="slideshow_composition",
+                message=(
+                    f"Narrated scenes {', '.join(framed_scene_ids)} repeatedly use page or "
+                    "presentation framing. The sequence reads as a slideshow rather than one "
+                    "evolving visual world."
+                ),
+                recommended_edit=RecommendedEdit(
+                    scene_id=framed_scene_ids[0],
+                    action="replace_slideshow_composition",
+                    object_id=None,
+                    field="scenes",
+                    suggested_value=None,
+                    reason=(
+                        "Remove repeated headings, cards, stage labels, and navigation chrome. "
+                        "Establish causal actors once and choreograph their transformations across "
+                        "edit boundaries."
+                    ),
+                ),
+            )
+        )
+
     return findings
 
 
@@ -2446,6 +3231,14 @@ def _index_object_metadata(obj: dict[str, Any], metadata: dict[str, dict[str, An
         metadata[obj_id] = {
             "type": obj.get("type"),
             "layout": obj.get("layout"),
+            "content": obj.get("content") if isinstance(obj.get("content"), str) else "",
+            "text_children": [
+                child.get("id")
+                for child in obj.get("children", []) or []
+                if isinstance(child, dict)
+                and isinstance(child.get("content"), str)
+                and child.get("content", "").strip()
+            ],
         }
     for child in obj.get("children", []) or []:
         if isinstance(child, dict):
@@ -2482,7 +3275,10 @@ def _collect_reveal_events(scene_spec: Any) -> list[RevealEvent]:
         action = getattr(getattr(anim, "action", None), "value", getattr(anim, "action", None))
         if action not in {"appear", "fade-in", "draw", "type", "replace"}:
             continue
-        start_seconds = parse_duration(getattr(anim, "at", None) or "0s")
+        start_seconds = _safe_authored_start_seconds(
+            getattr(anim, "at", None),
+            fallback=float(animation_index),
+        )
         duration_seconds = parse_duration(getattr(anim, "duration", None) or "0s")
         target = getattr(anim, "target", None)
         target_ids = [target] if isinstance(target, str) else list(target or [])
@@ -2533,6 +3329,78 @@ def _object_parent_map(objects: list[Any]) -> dict[str, str | None]:
 
     walk(objects, None)
     return parent_map
+
+
+def _select_representative_preview_time(graph: Any) -> float:
+    """Pick a deterministic, nonblank preview frame from the opening scene.
+
+    CLI PNG exports deliberately remain a literal time-zero render. MCP previews
+    instead inspect the first scene at animation boundaries, then use the
+    earliest moment containing the greatest number of visible drawable objects.
+    """
+    scenes = getattr(graph, "scenes", None) or []
+    if not scenes:
+        return 0.0
+
+    scene = scenes[0]
+    candidates = _preview_candidate_times(scene)
+    return max(
+        candidates,
+        key=lambda time: (_visible_drawable_count(scene, time), -time),
+    )
+
+
+def _preview_candidate_times(scene: Any) -> list[float]:
+    duration = max(0.0, float(getattr(scene, "duration", 0.0)))
+    scene_end = max(0.0, duration - _PREVIEW_FRAME_EPSILON_SECONDS)
+    candidates = {0.0}
+    for keyframe in getattr(scene, "timeline", []) or []:
+        for boundary in (keyframe.start_time, keyframe.start_time + keyframe.duration):
+            candidates.add(min(scene_end, max(0.0, float(boundary))))
+    return sorted(candidates)
+
+
+def _visible_drawable_count(scene: Any, time: float) -> int:
+    nodes = deepcopy(scene.node_map)
+    apply_animations_at_time(nodes, scene.timeline, time)
+    parent_map = _scene_node_parent_map(getattr(scene, "nodes", []) or [])
+    count = 0
+    for node_id, node in nodes.items():
+        if getattr(node, "obj_type", None) == ObjectType.GROUP:
+            continue
+        if not _node_is_effectively_visible(node_id, nodes, parent_map):
+            continue
+        count += 1
+    return count
+
+
+def _scene_node_parent_map(nodes: list[Any]) -> dict[str, str | None]:
+    parent_map: dict[str, str | None] = {}
+
+    def walk(children: list[Any], parent_id: str | None) -> None:
+        for node in children:
+            node_id = getattr(node, "id", None)
+            if not node_id:
+                continue
+            parent_map[node_id] = parent_id
+            walk(getattr(node, "children", []) or [], node_id)
+
+    walk(nodes, None)
+    return parent_map
+
+
+def _node_is_effectively_visible(
+    node_id: str,
+    nodes: dict[str, Any],
+    parent_map: dict[str, str | None],
+) -> bool:
+    current_id: str | None = node_id
+    while current_id is not None:
+        node = nodes.get(current_id)
+        if node is None or not node.visible or node.opacity <= _PREVIEW_OPACITY_THRESHOLD:
+            return False
+        current_id = parent_map.get(current_id)
+    return True
 
 
 def _gradual_reveal_overlap(left: RevealEvent, right: RevealEvent) -> bool:
@@ -2678,7 +3546,7 @@ def _recommend_edits_from_messages(
                 action="replace_theme",
                 object_id=None,
                 field="meta.theme",
-                suggested_value="modern",
+                suggested_value="editorial",
                 reason="Use a built-in theme or create one with add_theme before rendering.",
             )
         )
@@ -2963,43 +3831,221 @@ def _round_up_duration_seconds(value: float) -> float:
     return max(0.5, math.ceil(value * 2.0) / 2.0)
 
 
-def _planner_draft_outline(topic: str | None) -> list[dict[str, str]]:
+def _planner_choreography_outline(topic: str | None) -> list[dict[str, str]]:
     subject = (topic or "the concept").strip()
-    lowered = subject.lower()
-    mechanism_title = f"How {subject} moves through the system"
-    if lowered.startswith("how "):
-        mechanism_title = subject[0].upper() + subject[1:]
     return [
         {
-            "scene_id": "problem",
-            "purpose": "Show the pain or confusion first so the viewer cares.",
-            "suggested_title": f"Why {subject} matters",
+            "movement_id": "movement_01_arrival",
+            "purpose": "Introduce one concrete actor or state in motion; no title card or agenda.",
+            "suggested_title": f"{subject}: the first visible state",
         },
         {
-            "scene_id": "entry",
-            "purpose": "Show what enters the system or where the process begins.",
-            "suggested_title": f"Where {subject} begins",
+            "movement_id": "movement_02_transformation",
+            "purpose": "Keep the same actor on screen and visibly transform, split, route, or combine it.",
+            "suggested_title": f"{subject}: the causal transformation",
         },
         {
-            "scene_id": "flow",
-            "purpose": "Walk through the step-by-step state flow with the main diagram.",
-            "suggested_title": mechanism_title,
+            "movement_id": "movement_03_consequence",
+            "purpose": "Let the transformation physically create the consequence in the same spatial world.",
+            "suggested_title": f"{subject}: the consequence",
         },
         {
-            "scene_id": "outcome",
-            "purpose": "Close with the outcome, benefit, or mental model to remember.",
-            "suggested_title": f"The outcome for {subject}",
+            "movement_id": "movement_04_transfer",
+            "purpose": "Change one input and let the existing choreography prove the viewer can predict the result.",
+            "suggested_title": f"{subject}: the predictive payoff",
         },
     ]
 
 
-def _reference_example_excerpt(filename: str, *, max_lines: int = 22) -> str:
-    root = Path(__file__).resolve().parents[3]
-    lines = (root / "examples" / "reference" / filename).read_text(encoding="utf-8").splitlines()
-    excerpt = lines[:max_lines]
-    if len(lines) > max_lines:
-        excerpt.append("...")
-    return "\n".join(excerpt)
+def _normalize_capability_requests(
+    requests: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Normalize planner capability gaps into durable, agent-ready requests."""
+    if requests is None:
+        return []
+    if not isinstance(requests, list):
+        raise ValueError("capability_requests must be a list of request objects.")
+
+    normalized: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    required_text_fields = (
+        "creative_intent",
+        "story_moment",
+        "reusable_scope",
+        "visual_behavior",
+        "implementation_context",
+        "fallback",
+        "product_risk",
+    )
+    allowed_statuses = {"pending", "implemented", "fallback accepted"}
+    allowed_authorizations = {"authorized", "not authorized"}
+    for index, request in enumerate(requests, start=1):
+        if not isinstance(request, dict):
+            raise ValueError("Each capability request must be an object.")
+        primitive = str(request.get("requested_primitive") or "").strip()
+        if not primitive:
+            raise ValueError("Each capability request needs requested_primitive.")
+        request_id = str(request.get("id") or f"capability_{index:02d}").strip()
+        if not request_id:
+            raise ValueError("Each capability request needs a non-empty id.")
+        if request_id in seen_ids:
+            raise ValueError(f"Capability request id {request_id!r} is duplicated.")
+        seen_ids.add(request_id)
+
+        text_values = {
+            field: str(request.get(field) or "").strip() for field in required_text_fields
+        }
+        missing_fields = [field for field, value in text_values.items() if not value]
+        if missing_fields:
+            raise ValueError(
+                f"Capability request {request_id!r} is missing required context: "
+                + ", ".join(missing_fields)
+                + "."
+            )
+
+        acceptance_tests = request.get("acceptance_tests")
+        if (
+            not isinstance(acceptance_tests, list)
+            or not acceptance_tests
+            or not all(isinstance(item, str) and item.strip() for item in acceptance_tests)
+        ):
+            raise ValueError(
+                f"Capability request {request_id!r} needs a non-empty list of acceptance_tests."
+            )
+
+        authorization = str(request.get("authorization") or "").strip().casefold()
+        if authorization not in allowed_authorizations:
+            raise ValueError(
+                f"Capability request {request_id!r} authorization must be 'authorized' "
+                "or 'not authorized'."
+            )
+        resolution_status = str(request.get("resolution_status") or "pending").strip().casefold()
+        if resolution_status not in allowed_statuses:
+            raise ValueError(
+                f"Capability request {request_id!r} resolution_status must be 'pending', "
+                "'implemented', or 'fallback accepted'."
+            )
+        normalized.append(
+            {
+                "id": request_id,
+                "requested_primitive": primitive,
+                "creative_intent": text_values["creative_intent"],
+                "story_moment": text_values["story_moment"],
+                "reusable_scope": text_values["reusable_scope"],
+                "visual_behavior": text_values["visual_behavior"],
+                "acceptance_tests": [item.strip() for item in acceptance_tests],
+                "implementation_context": text_values["implementation_context"],
+                "fallback": text_values["fallback"],
+                "product_risk": text_values["product_risk"],
+                "authorization": authorization,
+                "resolution_status": resolution_status,
+            }
+        )
+    return normalized
+
+
+def _capability_implementation_brief(request: dict[str, Any]) -> dict[str, Any]:
+    """Create the compact handoff packet a host orchestrator gives one agent."""
+    return {
+        "brief_id": f"{request['id']}_implementation",
+        "assignment": (
+            "One bounded lower-cost implementation agent owns this reusable primitive; "
+            "the host orchestrator integrates and reviews its result."
+        ),
+        "requested_primitive": request["requested_primitive"],
+        "creative_intent": request["creative_intent"],
+        "story_moment": request["story_moment"],
+        "reusable_scope": request["reusable_scope"],
+        "visual_behavior": request["visual_behavior"],
+        "acceptance_tests": request["acceptance_tests"],
+        "implementation_context": request["implementation_context"],
+        "completion_gate": (
+            "Implement and pass the listed acceptance tests, then submit for root-orchestrator "
+            "integration and review."
+        ),
+    }
+
+
+def _planner_choreography_briefs(topic: str | None) -> list[dict[str, Any]]:
+    """Produce review packets for timeline segments under one creative director."""
+    subject = (topic or "the concept").strip()
+    shared = {
+        "story": (
+            f"Answer one clear viewer question about {subject} through visible cause and effect. "
+            "The viewer must be able to retell and predict the path in plain English."
+        ),
+        "intent_translation": (
+            "Treat user examples, numbers, and requested scenes as evidence of intent, not a script. "
+            "Preserve the desired learner transformation instead of copying their surface form."
+        ),
+        "mental_model": (
+            "Use one familiar model that maps to the mechanism. Show its causal action before "
+            "introducing technical vocabulary or formal notation."
+        ),
+        "boundary": (
+            "Show what happened before this moment, what remains fixed during it, and what changes afterward."
+        ),
+        "visual_language": (
+            "Derive a subject-specific spatial metaphor. Theme tokens set color and type only; "
+            "they do not determine composition. Avoid repeated headers, footers, cards, and lanes."
+        ),
+        "primitive_budget": (
+            "Use the fewest objects needed for continuous choreography. A box is allowed only "
+            "when a boundary exists in the subject, never as a default container."
+        ),
+        "motion_language": (
+            "The same actor should move, split, combine, replace, or change scale in place. "
+            "Use fade only for a true entrance or exit; motion carries the explanation."
+        ),
+        "narration_language": "Conversational spoken English that adds interpretation instead of reading labels.",
+    }
+    local_jobs = (
+        (
+            "movement_01_arrival",
+            "Create curiosity through an arrival or visible tension",
+            "One actor entering a meaningful spatial world",
+            "The actor remains available for transformation",
+        ),
+        (
+            "movement_02_transformation",
+            "Make cause and effect physically visible",
+            "The existing actor transforming without a composition reset",
+            "A visibly changed state in the same world",
+        ),
+        (
+            "movement_03_consequence",
+            "Let the transformed state create its consequence",
+            "Motion that connects the changed state to the outcome",
+            "A consequence whose source remains traceable",
+        ),
+        (
+            "movement_04_transfer",
+            "Prove understanding with a changed input",
+            "The established choreography replaying with one meaningful difference",
+            "A prediction the viewer can now explain",
+        ),
+    )
+    return [
+        {
+            "segment_id": scene_id,
+            "shared_context": shared,
+            "narrative_job": narrative_job,
+            "dominant_visual": dominant_visual,
+            "incoming_state": (
+                "Carry forward only actors the viewer already needs."
+                if index
+                else "None; this scene opens the story."
+            ),
+            "outgoing_state": outgoing_state,
+            "constraint": (
+                "This segment must not be composed as an isolated slide. It inherits spatial state "
+                "from the previous segment and must hand a changed actor to the next one."
+            ),
+        }
+        for index, (scene_id, narrative_job, dominant_visual, outgoing_state) in enumerate(
+            local_jobs
+        )
+    ]
 
 
 def _tokenize_for_overlap(text: str) -> list[str]:

@@ -52,5 +52,9 @@ SKILL.md
 .coverage
 htmlcov/
 
+# Local tool caches
+.npm-cache/
+.playwright-cli/
+
 # Env File
 .env

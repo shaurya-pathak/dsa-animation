@@ -1,0 +1,416 @@
+{
+  "version": "1.5",
+  "meta": {
+    "title": "Prime Brokerage",
+    "resolution": [1920, 1080],
+    "fps": 30,
+    "theme": "editorial",
+    "audience": "layperson",
+    "story_contract": "prime_brokerage.story.md",
+    "show_subtitles": false,
+    "pacing": "educational",
+    "continuity": true,
+    "continuity_duration": "1.2s",
+    "video_bookends": false
+  },
+  "scenes": [
+    {
+      "id": "scattered_work",
+      "duration": "46s",
+      "layout": {"type": "center", "gap": "large", "align": "center"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "Imagine you help operate an investment fund. The fund buys and sells hundreds of investments, and it does not always trade through the same broker. Broker A might find the best price for one order. Broker B might be better for another. That flexibility is useful. But it creates a problem after the trade. Money still has to move. Securities still have to arrive. A short may need borrowed shares. Some positions may need financing. And the fund needs a reliable record of what this prime relationship carries. If every trade stayed in a separate pile at the broker that executed it, the operations team would spend its day piecing those piles together.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "scattered_world",
+          "layout": {"type": "stack", "gap": "large", "align": "center"},
+          "visible": true,
+          "children": [
+            {"type": "text", "id": "problem_heading", "content": "A trade is only the start", "style": "hero-heading", "visible": false},
+            {
+              "type": "group",
+              "id": "shared_cast",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "fund", "actor_id": "fund", "continuity_mode": "position_only", "icon_name": "fund", "content": "Fund", "style": "focus-coral", "size_variant": "hero", "visible": false},
+                {"type": "semantic_icon", "id": "broker_a", "actor_id": "broker_a", "continuity_mode": "position_only", "icon_name": "storefront", "content": "Broker A", "style": "focus-cyan", "size_variant": "hero", "visible": false},
+                {"type": "semantic_icon", "id": "broker_b", "actor_id": "broker_b", "continuity_mode": "position_only", "icon_name": "storefront", "content": "Broker B", "style": "focus-cyan", "size_variant": "hero", "visible": false}
+              ]
+            },
+            {
+              "type": "group",
+              "id": "separate_piles",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "cash_work", "icon_name": "cash", "content": "Move cash", "style": "focus-dark", "size_variant": "hero", "visible": false},
+                {"type": "semantic_icon", "id": "shares_work", "icon_name": "shares", "content": "Receive shares", "style": "focus-dark", "size_variant": "hero", "visible": false},
+                {"type": "semantic_icon", "id": "borrow_work", "icon_name": "borrow", "content": "Borrow shares", "style": "focus-gold", "size_variant": "hero", "visible": false},
+                {"type": "semantic_icon", "id": "finance_work", "icon_name": "loan", "content": "Track financing", "style": "focus-gold", "size_variant": "hero", "visible": false}
+              ]
+            },
+            {"type": "text", "id": "piles_caption", "content": "Separate trades leave separate operational piles", "style": "heading", "visible": false}
+          ]
+        }
+      ],
+      "animations": [
+        {"id": "show_fund", "action": "fade-in", "target": "fund", "at": "1s", "cue": "operate an investment fund", "duration": "0.8s"},
+        {"id": "show_brokers", "action": "fade-in", "target": ["broker_a", "broker_b"], "at": "8s", "cue": "same broker", "duration": "0.9s", "stagger": "0.35s"},
+        {"id": "show_problem", "action": "fade-in", "target": "problem_heading", "at": "18s", "cue": "creates a problem after the trade", "duration": "0.8s"},
+        {"id": "show_cash", "action": "fade-in", "target": "cash_work", "at": "22s", "cue": "Money still has to move", "duration": "0.6s"},
+        {"id": "show_shares", "action": "fade-in", "target": "shares_work", "at": "25s", "cue": "Securities still have to arrive", "duration": "0.6s"},
+        {"id": "show_borrow", "action": "fade-in", "target": "borrow_work", "at": "28s", "cue": "short may need borrowed shares", "duration": "0.6s"},
+        {"id": "show_finance", "action": "fade-in", "target": "finance_work", "at": "31s", "cue": "positions may need financing", "duration": "0.6s"},
+        {"id": "gather_work", "action": "move", "target": ["cash_work", "shares_work", "borrow_work", "finance_work"], "at": "37s", "cue": "separate pile", "duration": "1.2s", "translate": {"x": 0, "y": 0.45, "basis": "self"}, "stagger": "0.15s"},
+        {"id": "show_piles_caption", "action": "fade-in", "target": "piles_caption", "at": "40s", "cue": "piecing those piles together", "duration": "0.8s"}
+      ]
+    },
+    {
+      "id": "warehouse_analogy",
+      "duration": "43s",
+      "layout": {"type": "center", "gap": "large", "align": "center"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "Think of Broker A and Broker B as two different storefronts. The fund can shop at either one. But after it buys something, it wants the accepted purchase sent to one receiving warehouse, where the inventory and the bill can be managed together. That receiving warehouse is the useful mental model for a prime broker. The analogy is not exact. Securities move electronically, not in boxes. But it gives us the central idea. Executing brokers help the fund make trades. A prime broker helps the fund operate and finance the accepted positions that result from those trades.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "warehouse_world",
+          "layout": {"type": "stack", "gap": "large", "align": "center"},
+          "visible": true,
+          "children": [
+            {"type": "text", "id": "analogy_heading", "content": "Several storefronts, one receiving warehouse", "style": "hero-heading", "position": "top", "visible": false},
+            {
+              "type": "group",
+              "id": "warehouse_row",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "fund", "actor_id": "fund", "continuity_mode": "position_only", "icon_name": "fund", "content": "Fund", "style": "focus-coral", "size_variant": "hero", "visible": true},
+                {
+                  "type": "group",
+                  "id": "storefronts",
+                  "layout": {"type": "stack", "gap": "medium", "align": "center"},
+                  "visible": true,
+                  "children": [
+                    {"type": "semantic_icon", "id": "broker_a", "actor_id": "broker_a", "continuity_mode": "position_only", "icon_name": "storefront", "content": "Broker A", "style": "focus-cyan", "size_variant": "hero", "visible": true},
+                    {"type": "semantic_icon", "id": "broker_b", "actor_id": "broker_b", "continuity_mode": "position_only", "icon_name": "storefront", "content": "Broker B", "style": "focus-cyan", "size_variant": "hero", "visible": true}
+                  ]
+                },
+                {
+                  "type": "group",
+                  "id": "warehouse_slot",
+                  "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small", "align": "center"},
+                  "visible": true,
+                  "children": [
+                    {"type": "semantic_icon", "id": "warehouse", "icon_name": "warehouse", "content": "Receiving warehouse", "style": "focus-gold", "size_variant": "hero", "grid": {"row": 1, "col": 1}, "visible": false},
+                    {"type": "semantic_icon", "id": "prime_broker", "actor_id": "prime_broker", "continuity_mode": "position_only", "icon_name": "warehouse", "content": "Prime broker", "style": "focus-gold", "size_variant": "hero", "grid": {"row": 1, "col": 1}, "visible": false}
+                  ]
+                }
+              ]
+            },
+            {"type": "connector", "id": "a_to_warehouse", "from": "broker_a", "to": "warehouse", "style": "gold", "visible": false},
+            {"type": "connector", "id": "b_to_warehouse", "from": "broker_b", "to": "warehouse", "style": "gold", "visible": false},
+            {"type": "text", "id": "together_caption", "content": "Managed together", "style": "heading", "visible": false}
+          ]
+        }
+      ],
+      "animations": [
+        {"id": "show_analogy_heading", "action": "fade-in", "target": "analogy_heading", "at": "1s", "cue": "two different storefronts", "duration": "0.8s"},
+        {"id": "show_warehouse", "action": "fade-in", "target": "warehouse", "at": "11s", "cue": "one receiving warehouse", "duration": "0.9s"},
+        {"id": "draw_a_delivery", "action": "draw", "target": "a_to_warehouse", "at": "14s", "cue": "accepted purchase sent", "duration": "0.7s"},
+        {"id": "flow_a_delivery", "action": "flow", "target": "a_to_warehouse", "after": "draw_a_delivery", "duration": "1.2s", "color": "gold"},
+        {"id": "draw_b_delivery", "action": "draw", "target": "b_to_warehouse", "at": "16s", "cue": "managed together", "duration": "0.7s"},
+        {"id": "flow_b_delivery", "action": "flow", "target": "b_to_warehouse", "after": "draw_b_delivery", "duration": "1.2s", "color": "gold"},
+        {"id": "show_together", "action": "fade-in", "target": "together_caption", "at": "18s", "cue": "managed together", "duration": "0.7s"},
+        {"id": "name_prime", "action": "replace", "target": "warehouse", "with": "prime_broker", "at": "23s", "cue": "mental model for a prime broker", "duration": "1s"}
+      ]
+    },
+    {
+      "id": "northstar_decision_and_fill",
+      "duration": "45s",
+      "layout": {"type": "center", "gap": "large", "align": "center"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "Let's follow one purchase slowly. The fund decides to buy 100 shares of a fictional company called Northstar. Northstar is just an example we can keep our eyes on from beginning to end. First, the fund sends the order to Broker A. Broker A finds a seller, and they agree on the quantity and price. In market language, the order has been filled. That word only means the trade has been agreed. The fund does not have the shares yet.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "northstar_decision_world",
+          "layout": {"type": "stack", "gap": "large", "align": "center"},
+          "visible": true,
+          "children": [
+            {"type": "text", "id": "northstar_heading", "content": "Follow one purchase", "style": "hero-heading", "visible": false},
+            {
+              "type": "group",
+              "id": "northstar_actor_row",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "fund", "actor_id": "fund", "continuity_mode": "position_only", "icon_name": "fund", "content": "Fund", "style": "focus-coral", "size_variant": "hero", "visible": true},
+                {"type": "semantic_icon", "id": "broker_a", "actor_id": "broker_a", "continuity_mode": "position_only", "icon_name": "storefront", "content": "Broker A", "style": "focus-cyan", "size_variant": "hero", "visible": true},
+                {"type": "semantic_icon", "id": "prime_broker", "actor_id": "prime_broker", "continuity_mode": "position_only", "icon_name": "warehouse", "content": "Prime broker", "style": "focus-gold", "size_variant": "hero", "visible": true}
+              ]
+            },
+            {
+              "type": "group",
+              "id": "northstar_card_slot",
+              "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "box", "id": "northstar_order", "actor_id": "northstar_purchase", "continuity_mode": "evolving", "content": "Buy 100 shares\nNorthstar", "style": "focus-coral", "size_variant": "hero", "grid": {"row": 1, "col": 1}, "visible": false},
+                {"type": "box", "id": "northstar_agreed", "actor_id": "northstar_purchase", "continuity_mode": "evolving", "content": "Trade agreed  \nNorthstar", "style": "focus-cyan", "size_variant": "hero", "grid": {"row": 1, "col": 1}, "visible": false}
+              ]
+            },
+            {
+              "type": "group",
+              "id": "terms_row",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "token", "id": "quantity", "content": "100 shares", "style": "focus-cyan", "size_variant": "hero", "visible": false},
+                {"type": "semantic_icon", "id": "agreement_mark", "icon_name": "handshake", "content": "Agreed", "style": "focus-cyan", "visible": false},
+                {"type": "token", "id": "price", "content": "an agreed price", "style": "focus-cyan", "size_variant": "hero", "visible": false}
+              ]
+            },
+            {"type": "text", "id": "not_settled", "content": "Shares not moved yet", "style": "heading", "visible": false}
+          ]
+        }
+      ],
+      "animations": [
+        {"id": "show_northstar_heading", "action": "fade-in", "target": "northstar_heading", "at": "1s", "cue": "follow one purchase slowly", "duration": "0.8s"},
+        {"id": "show_northstar_order", "action": "fade-in", "target": "northstar_order", "at": "6s", "cue": "buy 100 shares", "duration": "0.9s"},
+        {"id": "send_order", "action": "move-to", "target": "northstar_order", "to_id": "broker_a", "at": "16s", "cue": "sends the order to Broker A", "duration": "1.1s", "translate": {"x": -0.7, "y": 0, "basis": "target"}},
+        {"id": "show_terms", "action": "fade-in", "target": ["quantity", "agreement_mark", "price"], "at": "21s", "cue": "agree on the quantity and price", "duration": "0.7s", "stagger": "0.2s"},
+        {"id": "make_trade_agreed", "action": "replace", "target": "northstar_order", "with": "northstar_agreed", "at": "27s", "cue": "order has been filled", "duration": "0.9s"},
+        {"id": "show_not_settled", "action": "fade-in", "target": "not_settled", "at": "35s", "cue": "does not have the shares yet", "duration": "0.8s"}
+      ]
+    },
+    {
+      "id": "northstar_settlement",
+      "duration": "45s",
+      "layout": {"type": "center", "gap": "large", "align": "center"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "Next, the Northstar trade record reaches the prime broker. The prime broker checks that the details match and that the trade fits the limits already agreed for this account. If the trade is accepted, the prime broker coordinates and records what happens next. Now the trade settles. Through market infrastructure, the fund's cash moves out and 100 Northstar shares move in. Only now does the account show a completed position: plus 100 Northstar. Northstar did not appear from nowhere. It is the same purchase we have followed the entire time.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "settlement_world",
+          "layout": {"type": "stack", "gap": "large", "align": "center"},
+          "visible": true,
+          "children": [
+            {
+              "type": "group",
+              "id": "settlement_actor_row",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "fund", "actor_id": "fund", "continuity_mode": "position_only", "icon_name": "fund", "content": "Fund", "style": "focus-coral", "size_variant": "hero", "visible": true},
+                {"type": "semantic_icon", "id": "market", "actor_id": "market", "continuity_mode": "position_only", "icon_name": "warehouse", "content": "Market infrastructure", "style": "focus-dark", "size_variant": "hero", "visible": false},
+                {"type": "semantic_icon", "id": "prime_broker", "actor_id": "prime_broker", "continuity_mode": "position_only", "icon_name": "warehouse", "content": "Prime broker", "style": "focus-gold", "size_variant": "hero", "visible": true}
+              ]
+            },
+            {
+              "type": "group",
+              "id": "settlement_card_slot",
+              "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "box", "id": "northstar_trade", "actor_id": "northstar_purchase", "continuity_mode": "evolving", "content": "Trade agreed  \nNorthstar", "style": "focus-cyan", "size_variant": "hero", "grid": {"row": 1, "col": 1}, "visible": true},
+                {"type": "box", "id": "northstar_position", "actor_id": "northstar_purchase", "continuity_mode": "evolving", "content": "+100 shares   \nNorthstar", "style": "focus-gold", "size_variant": "hero", "grid": {"row": 1, "col": 1}, "visible": false}
+              ]
+            },
+            {"type": "text", "id": "check_caption", "content": "Details + limits checked", "style": "heading", "visible": false},
+            {
+              "type": "group",
+              "id": "exchange_row",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "cash_token", "icon_name": "cash", "content": "Cash", "style": "focus-coral", "size_variant": "hero", "visible": false},
+                {"type": "text", "id": "exchange_mark", "content": "exchanges for", "style": "operator", "visible": false},
+                {"type": "semantic_icon", "id": "shares_token", "icon_name": "shares", "content": "100 Northstar shares", "style": "focus-cyan", "size_variant": "hero", "visible": false}
+              ]
+            },
+            {"type": "connector", "id": "cash_settlement_route", "from": "fund", "to": "market", "style": "coral", "visible": false},
+            {"type": "connector", "id": "shares_settlement_route", "from": "market", "to": "fund", "style": "cyan", "visible": false}
+          ]
+        }
+      ],
+      "animations": [
+        {"id": "show_check", "action": "fade-in", "target": "check_caption", "at": "5s", "cue": "checks that the details match", "duration": "0.8s"},
+        {"id": "show_market", "action": "fade-in", "target": "market", "at": "18s", "cue": "trade settles", "duration": "0.8s"},
+        {"id": "show_exchange_items", "action": "fade-in", "target": ["cash_token", "exchange_mark", "shares_token"], "at": "23s", "cue": "cash moves out and 100 Northstar shares move in", "duration": "0.7s", "stagger": "0.2s"},
+        {"id": "draw_cash_route", "action": "draw", "target": "cash_settlement_route", "at": "24s", "cue": "cash moves out", "duration": "0.6s"},
+        {"id": "flow_cash", "action": "flow", "target": "cash_settlement_route", "after": "draw_cash_route", "duration": "1.1s", "color": "coral"},
+        {"id": "draw_shares_route", "action": "draw", "target": "shares_settlement_route", "at": "27s", "cue": "shares move in", "duration": "0.6s"},
+        {"id": "flow_shares", "action": "flow", "target": "shares_settlement_route", "after": "draw_shares_route", "duration": "1.1s", "color": "cyan"},
+        {"id": "make_position", "action": "replace", "target": "northstar_trade", "with": "northstar_position", "at": "32s", "cue": "completed position", "duration": "1s"}
+      ]
+    },
+    {
+      "id": "harbor_short_and_borrow",
+      "duration": "42s",
+      "layout": {"type": "center", "gap": "large", "align": "center"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "Now suppose the fund believes Harbor will fall. It wants to sell 40 Harbor shares now and buy them back later. But the fund does not own those shares, so it cannot simply pretend they exist. It needs to borrow them. Before Broker B executes the short, it must determine that shares can be borrowed for delivery. Then a stock-loan arrangement supports that borrowing while the short stays open, often through the prime broker or its lending partners. That is why the prime account shows two facts together: short 40 Harbor, and borrowed 40 Harbor. The short can remain open only while the borrow is available.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "harbor_world",
+          "layout": {"type": "stack", "gap": "large", "align": "center"},
+          "visible": true,
+          "children": [
+            {
+              "type": "group",
+              "id": "harbor_actor_row",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "fund", "actor_id": "fund", "continuity_mode": "position_only", "icon_name": "fund", "content": "Fund", "style": "focus-coral", "size_variant": "hero", "visible": true},
+                {"type": "semantic_icon", "id": "broker_b", "actor_id": "broker_b", "continuity_mode": "position_only", "icon_name": "storefront", "content": "Broker B", "style": "focus-cyan", "size_variant": "hero", "visible": true},
+                {"type": "semantic_icon", "id": "prime_broker", "actor_id": "prime_broker", "continuity_mode": "position_only", "icon_name": "warehouse", "content": "Prime broker", "style": "focus-gold", "size_variant": "hero", "visible": true}
+              ]
+            },
+            {"type": "box", "id": "harbor_intent", "content": "Sell 40 Harbor", "style": "focus-coral", "size_variant": "hero", "visible": false},
+            {"type": "token", "id": "harbor_buyback", "content": "Buy back later", "style": "focus-coral", "size_variant": "hero", "visible": false},
+            {"type": "text", "id": "borrow_question", "content": "40 shares needed", "style": "heading", "visible": false},
+            {
+              "type": "group",
+              "id": "harbor_pair",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "box", "id": "short_harbor", "actor_id": "short_harbor", "continuity_mode": "position_only", "content": "Short 40 Harbor", "style": "focus-coral", "size_variant": "hero", "visible": false},
+                {"type": "text", "id": "paired_with", "content": "paired with", "style": "operator", "visible": false},
+                {"type": "semantic_icon", "id": "borrowed_harbor", "actor_id": "borrowed_harbor", "continuity_mode": "position_only", "icon_name": "borrow", "content": "Borrowed 40 Harbor", "style": "focus-gold", "size_variant": "hero", "visible": false}
+              ]
+            },
+            {"type": "connector", "id": "borrow_route", "from": "prime_broker", "to": "borrowed_harbor", "style": "gold", "visible": false}
+          ]
+        }
+      ],
+      "animations": [
+        {"id": "show_harbor_intent", "action": "fade-in", "target": "harbor_intent", "at": "6s", "cue": "sell 40 Harbor shares now", "duration": "0.9s"},
+        {"id": "show_buyback", "action": "fade-in", "target": "harbor_buyback", "at": "11s", "cue": "buy them back later", "duration": "0.7s"},
+        {"id": "show_borrow_question", "action": "fade-in", "target": "borrow_question", "at": "14s", "cue": "needs to borrow them", "duration": "0.8s"},
+        {"id": "move_short_to_broker", "action": "move-to", "target": "harbor_intent", "to_id": "broker_b", "at": "19s", "cue": "Before Broker B executes the short", "duration": "1s", "translate": {"x": -0.65, "y": 0, "basis": "target"}},
+        {"id": "draw_borrow_route", "action": "draw", "target": "borrow_route", "at": "25s", "cue": "stock-loan arrangement supports", "duration": "0.7s"},
+        {"id": "flow_borrow_route", "action": "flow", "target": "borrow_route", "after": "draw_borrow_route", "duration": "1.1s", "color": "gold"},
+        {"id": "show_paired_facts", "action": "fade-in", "target": ["short_harbor", "paired_with", "borrowed_harbor"], "at": "31s", "cue": "two facts together", "duration": "0.8s", "stagger": "0.18s"}
+      ]
+    },
+    {
+      "id": "financing_and_margin",
+      "duration": "40s",
+      "layout": {"type": "center", "gap": "large", "align": "center"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "The prime broker may also lend the fund part of the money supporting its positions. That is secured financing. The fund provides capital and collateral, and the prime broker monitors the cushion protecting the loan. Suppose Harbor rises instead of falling. The short loses money, so that cushion shrinks. The prime broker may ask the fund to add collateral or reduce the position. The exact rules vary, but the reason is simple: the loan must remain protected as the value of the account changes.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "margin_world",
+          "layout": {"type": "stack", "gap": "large", "align": "center"},
+          "visible": true,
+          "children": [
+            {
+              "type": "group",
+              "id": "margin_actor_row",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "fund", "actor_id": "fund", "continuity_mode": "position_only", "icon_name": "fund", "content": "", "style": "focus-coral", "size_variant": "hero", "visible": true},
+                {"type": "semantic_icon", "id": "prime_broker", "actor_id": "prime_broker", "continuity_mode": "position_only", "icon_name": "warehouse", "content": "", "style": "focus-gold", "size_variant": "hero", "visible": true}
+              ]
+            },
+            {
+              "type": "group",
+              "id": "funding_row",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "capital", "icon_name": "cash", "content": "Fund capital", "style": "focus-coral", "size_variant": "hero", "visible": false},
+                {"type": "text", "id": "plus_sign", "content": "+", "style": "operator", "visible": false},
+                {"type": "semantic_icon", "id": "secured_loan", "icon_name": "loan", "content": "Secured loan", "style": "focus-gold", "size_variant": "hero", "visible": false}
+              ]
+            },
+            {
+              "type": "group",
+              "id": "cushion_slot",
+              "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "linear_meter", "id": "cushion_meter", "content": "", "style": "metric-gold", "size_variant": "hero", "meter_min": 0, "meter_max": 100, "meter_value": 72, "meter_left_label": "Thin", "meter_right_label": "More room", "meter_value_label": "Cushion", "meter_caption": "Collateral cushion", "grid": {"row": 1, "col": 1}, "visible": false}
+              ]
+            },
+            {"type": "token", "id": "harbor_rises", "content": "Harbor rises", "style": "focus-coral", "size_variant": "hero", "visible": false},
+            {"type": "text", "id": "response", "content": "Add collateral or reduce exposure", "style": "heading", "position": "bottom", "visible": false}
+          ]
+        }
+      ],
+      "animations": [
+        {"id": "show_funding", "action": "fade-in", "target": ["capital", "plus_sign", "secured_loan"], "at": "8s", "cue": "secured financing", "duration": "0.8s", "stagger": "0.2s"},
+        {"id": "show_roomy_cushion", "action": "fade-in", "target": "cushion_meter", "at": "15s", "cue": "cushion protecting the loan", "duration": "0.9s"},
+        {"id": "show_harbor_rises", "action": "fade-in", "target": "harbor_rises", "at": "21s", "cue": "Harbor rises instead of falling", "duration": "0.8s"},
+        {"id": "shrink_cushion", "action": "meter-to", "target": "cushion_meter", "meter_value": 24, "at": "26s", "cue": "cushion shrinks", "duration": "1.4s"},
+        {"id": "show_response", "action": "fade-in", "target": "response", "at": "30s", "cue": "add collateral or reduce the position", "duration": "0.9s"}
+      ]
+    },
+    {
+      "id": "mental_model_recap",
+      "duration": "42s",
+      "layout": {"type": "center", "gap": "large", "align": "center"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "Prime brokerage is not a smarter version of an ordinary broker. It is the central operating and financing relationship behind an institutional fund's trading. The fund chooses the investments. Executing brokers make the trades. Market infrastructure completes the exchange. Stock lending supports borrowed shares. And the prime broker accepts eligible trades into the relationship, carries the positions, provides agreed financing and reporting, and monitors collateral. Several trading doors. One place to operate the accepted positions. That is the problem prime brokerage solves.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "recap_world",
+          "layout": {"type": "stack", "gap": "large", "align": "center"},
+          "visible": true,
+          "children": [
+            {"type": "text", "id": "recap_heading", "content": "Prime brokerage, in one picture", "style": "hero-heading", "visible": false},
+            {
+              "type": "group",
+              "id": "recap_row",
+              "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+              "visible": true,
+              "children": [
+                {"type": "semantic_icon", "id": "fund", "actor_id": "fund", "continuity_mode": "position_only", "icon_name": "fund", "content": "Fund", "style": "focus-coral", "size_variant": "hero", "visible": true},
+                {
+                  "type": "group",
+                  "id": "executing_brokers",
+                  "layout": {"type": "stack", "gap": "medium", "align": "center"},
+                  "visible": true,
+                  "children": [
+                    {"type": "semantic_icon", "id": "broker_a", "actor_id": "broker_a", "continuity_mode": "position_only", "icon_name": "storefront", "content": "Broker A", "style": "focus-cyan", "size_variant": "hero", "visible": true},
+                    {"type": "semantic_icon", "id": "broker_b", "actor_id": "broker_b", "continuity_mode": "position_only", "icon_name": "storefront", "content": "Broker B", "style": "focus-cyan", "size_variant": "hero", "visible": true}
+                  ]
+                },
+                {"type": "semantic_icon", "id": "prime_broker", "actor_id": "prime_broker", "continuity_mode": "position_only", "icon_name": "warehouse", "content": "Prime broker", "style": "focus-gold", "size_variant": "hero", "visible": true}
+              ]
+            },
+            {"type": "connector", "id": "broker_a_to_prime", "from": "broker_a", "to": "prime_broker", "style": "gold", "visible": false},
+            {"type": "connector", "id": "broker_b_to_prime", "from": "broker_b", "to": "prime_broker", "style": "gold", "visible": false},
+            {"type": "text", "id": "recap_line", "content": "Several doors → one relationship", "style": "heading", "visible": false}
+          ]
+        }
+      ],
+      "animations": [
+        {"id": "show_recap_heading", "action": "fade-in", "target": "recap_heading", "at": "1s", "cue": "central operating and financing relationship", "duration": "0.8s"},
+        {"id": "draw_recap_a", "action": "draw", "target": "broker_a_to_prime", "at": "20s", "cue": "Executing brokers make the trades", "duration": "0.7s"},
+        {"id": "flow_recap_a", "action": "flow", "target": "broker_a_to_prime", "after": "draw_recap_a", "duration": "1.1s", "color": "gold"},
+        {"id": "draw_recap_b", "action": "draw", "target": "broker_b_to_prime", "at": "23s", "cue": "Stock lending supports borrowed shares", "duration": "0.7s"},
+        {"id": "flow_recap_b", "action": "flow", "target": "broker_b_to_prime", "after": "draw_recap_b", "duration": "1.1s", "color": "gold"},
+        {"id": "show_recap_line", "action": "fade-in", "target": "recap_line", "at": "33s", "cue": "Several trading doors", "duration": "0.9s"}
+      ]
+    }
+  ]
+}

@@ -48,7 +48,7 @@ Voice is intentionally packaged separately so the core renderer stays lightweigh
 make install-voice-local
 ```
 
-That installs `packages/kaivra-voice` in editable mode plus the Sherpa local dependency set. It exposes the built-in `openai`, `local`, and `elevenlabs` providers through Kaivra's discovery hooks, with `openai` as the default cloud voice path for narrated renders.
+That installs `packages/kaivra-voice` in editable mode plus the Sherpa local dependency set. It exposes the built-in `openai`, `local`, `qwen`, and `elevenlabs` providers through Kaivra's discovery hooks, with `openai` as the default cloud voice path for narrated renders.
 
 ### 5. Verify the install
 
@@ -80,6 +80,13 @@ For the offline local alternative:
 kaivra doctor
 kaivra download-model
 KAIVRA_VOICE_PROVIDER=local \
+kaivra quick-render examples/explainers/agentic_debug_agent_explainer.json --voice
+```
+
+For higher-quality Apple Silicon narration with an installed Qwen3-TTS CoreML worker:
+
+```bash
+KAIVRA_VOICE_PROVIDER=qwen \
 kaivra quick-render examples/explainers/agentic_debug_agent_explainer.json --voice
 ```
 
@@ -171,7 +178,25 @@ The MCP exposes a compact workflow:
 It writes starter files to `animations/`, custom themes to `themes/`, previews to `artifacts/previews/`, and final renders to `artifacts/renders/`.
 
 `animations/` is treated as a local authoring workspace and its JSON drafts are gitignored by default. Promote polished files into the curated `examples/` tree when you want them tracked in the repo. For scratch example variants that should stay local, use `examples/local/`.
-Prefer persistent document-level objects when labels, chapter trackers, or shared state should carry across scenes; use continuity morphs for scene-local elements that evolve from beat to beat.
+Persist story actors and changing values when the viewer must see their evolution. Do not create chapter trackers, persistent labels, or navigation chrome by default.
+
+For a layperson explainer, the brief must translate the user's intent into a
+Before-to-After learner transformation, one familiar mental model, and a
+visible causal story. It must distinguish earlier learning from the current
+prediction, make every operation physically or visually motivated before
+formal notation appears, and include sound-off, teach-back, counterfactual, and
+scale-change checks. Correct arithmetic is not a substitute for a learner being
+able to explain and predict the causal path.
+
+For every narrated layperson explainer, create and review `animations/<slug>.story.md` before authoring its JSON or rendering it. The brief is the golden contract: it captures the viewer question, definitions, causal ledger, beat sheet, and confusion traps; the JSON implements that approved story. Follow the [story-first explainer guide](docs/STORY_FIRST_EXPLAINERS.md), then use the canonical [forward-propagation story](examples/reference/forward_propagation.story.md) and [reference JSON](examples/reference/forward_propagation.json) as a pair. Do not copy an example's numbers or scene sequence in place of a story brief.
+
+For a narrated explainer, follow this order: learning transformation → persistent visual cast → one motion verb per beat → capability inventory → animatic → final JSON/render. Start with one viewer question, a reviewed story contract, and one choreography map for an evolving visual world. Use `motion_explainer`; one creative director owns the complete spatial and motion continuum. Themes supply palette and typography only. Do not begin from a title/body/footer template, and do not use pulse, glow, or repeated fades to disguise a static slideshow. The MCP preview PNG is a representative opening-scene frame rather than a literal time-zero image; CLI PNG renders intentionally remain at time zero.
+
+If the approved teaching move requires a reusable primitive Kaivra does not support, create a capability escalation before JSON authoring: desired visualization, learning purpose, missing primitive, fallback impact, authorization, and status. Creative approval approves the story, not implementation readiness. The host/root orchestrator delegates each approved primitive to a bounded lower-cost implementation agent with acceptance tests, integrates it personally, and resumes JSON only after implementation or an explicitly accepted fallback and product risk. See `kaivra://capability-escalation` in MCP-guided authoring and the [story-first explainer guide](docs/STORY_FIRST_EXPLAINERS.md).
+
+### DSL 1.5 compatibility
+
+New and unversioned documents default to `meta.theme: "editorial"`, `meta.video_bookends: false`, `meta.show_subtitles: false`, and scene `show_progress_bar: false`; explicit values always win. Put metadata such as `title` and `theme` inside `meta`, because v1.5 rejects unknown top-level fields. Documents at v1.4 and earlier retain `whiteboard`, enabled bookends, subtitles, and scene progress bars when those fields are omitted, and `check_animation` reports a migration warning.
 
 More setup detail lives in `docs/LOCAL_MCP.md`.
 
@@ -191,7 +216,7 @@ More setup detail lives in `docs/LOCAL_MCP.md`.
 
 Kaivra supports built-in themes and local JSON theme files.
 
-Built-in options include `modern`, `material`, and `whiteboard`. `material` is a sample theme based on Material UI design principles, and the repo also ships a JSON reference at `examples/themes/material.json` for MCP-driven customization flows.
+Built-in options include `editorial`, `modern`, `material`, `storyboard_dark`, and `whiteboard`. A theme controls palette, typography, and primitive styling; it is not a scene-composition or motion preset. `modern` remains available for intentionally card-based product material.
 
 ```bash
 mkdir -p themes
@@ -208,7 +233,7 @@ If you are using the Python API, use `register_theme("mint-breeze", {...})` for 
 
 Kaivra keeps the core package lightweight, and voice support lives in the local editable package at `packages/kaivra-voice`.
 
-Providers are discovered from installed `kaivra.voice_providers` entry points. After `make install-voice-local`, Kaivra can resolve `openai`, `local`, and `elevenlabs` automatically. Use `--voice-provider` or `KAIVRA_VOICE_PROVIDER` to pick the default provider. If you omit both during a voiced render, Kaivra now defaults to `openai`.
+Providers are discovered from installed `kaivra.voice_providers` entry points. After `make install-voice-local`, Kaivra can resolve `openai`, `local`, `qwen`, and `elevenlabs` automatically. Use `--voice-provider` or `KAIVRA_VOICE_PROVIDER` to pick the default provider. If you omit both during a voiced render, Kaivra now defaults to `openai`.
 
 If you see a "Voice providers are not installed" error, fix it with one of these repo-root commands:
 
@@ -233,6 +258,20 @@ kaivra download-model
 
 That installs into `~/.kaivra/models/vits-piper-en_US-amy-low/` and prints the resolved `model_path`, `tokens_path`, and `data_dir` so you can verify the bundle.
 
+For local Qwen3-TTS 1.7B narration, Kaivra keeps one CoreML worker resident across the complete render. Configure generic paths when they are not auto-discovered:
+
+```bash
+export KAIVRA_QWEN_TTS_BIN=/path/to/callbox-qwen-tts
+export KAIVRA_QWEN_TTS_MODELS_PATH=/path/to/ttskit-coreml
+export KAIVRA_QWEN_TTS_SPEAKER=serena
+export KAIVRA_QWEN_TTS_DECODER_MODE=throughputOptimized
+kaivra render examples/reference/forward_propagation.json \
+  -o artifacts/renders/forward_propagation_qwen.mp4 \
+  --voice --voice-provider qwen
+```
+
+`KAIVRA_QWEN_TTS_INSTRUCTION` controls delivery. Qwen emits measured scene audio but not native word timestamps, so Kaivra applies the same deterministic cue estimation used by other non-aligned providers.
+
 You can still attach pre-generated audio without the voice package:
 
 ```bash
@@ -243,7 +282,7 @@ kaivra render \
   --audio-timings artifacts/audio/explainers/agentic_debug_agent_explainer_audio_timings.json
 ```
 
-`--audio` muxes an existing track onto the render. `--audio-timings` retimes scene pacing from a JSON sidecar, and when cue windows are present Kaivra can align scene-local emphasis beats to those cues. If the sidecar only includes scene durations, Kaivra rescales authored timings proportionally and does not infer beat windows from narration text.
+`--audio` muxes an existing track onto the render. `--audio-timings` retimes scene pacing from a JSON sidecar, and when cue windows are present Kaivra can align scene-local emphasis beats to those cues. Voice providers without native word timings get deterministic estimated word windows from the measured audio clip, so explicit animation `cue` phrases still follow speech. Author `at` alongside `cue` when the same animation also needs a reliable silent-preview fallback; chain dependent motion with `after`.
 
 On-screen narration text is controlled by `meta.show_subtitles`. Older documents that still use `meta.show_narration` remain valid as a backward-compatible alias.
 

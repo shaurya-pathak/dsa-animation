@@ -33,6 +33,10 @@ def apply_animations_at_time(
         node.translate_y = 0.0
         node.highlight_intensity = 0.0
         node.highlight_color = None
+        node.flow_progress = None
+        if node.base_meter_value is None:
+            node.base_meter_value = node.meter_value
+        node.meter_value = node.base_meter_value
 
     for kf in keyframes:
         node = nodes.get(kf.target_id)
@@ -95,6 +99,17 @@ def apply_animations_at_time(
                     node.opacity = 1.0
                     node.draw_progress = 1.0
 
+            case AnimAction.FLOW:
+                if progress is not None:
+                    node.visible = True
+                    node.opacity = 1.0
+                    node.draw_progress = 1.0
+                    node.flow_progress = progress
+                elif t >= kf.start_time + kf.duration:
+                    node.visible = True
+                    node.opacity = 1.0
+                    node.draw_progress = 1.0
+
             case AnimAction.SCALE:
                 to_val = kf.to_value or 1.0
                 from_val = kf.from_value if kf.from_value is not None else 1.0
@@ -111,6 +126,24 @@ def apply_animations_at_time(
                     node.draw_progress = 1.0
                     node.scale_x = to_val
                     node.scale_y = to_val
+
+            case AnimAction.METER_TO:
+                # Keyframes execute in timeline order, so each meter-to starts from the
+                # value established by an earlier completed meter-to at this instant.
+                from_val = node.meter_value
+                to_val = kf.to_value
+                if to_val is None:
+                    continue
+                if progress is not None:
+                    node.visible = True
+                    node.opacity = 1.0
+                    node.draw_progress = 1.0
+                    node.meter_value = from_val + (to_val - from_val) * progress
+                elif t >= kf.start_time + kf.duration:
+                    node.visible = True
+                    node.opacity = 1.0
+                    node.draw_progress = 1.0
+                    node.meter_value = to_val
 
             case AnimAction.MOVE:
                 if kf.translate is not None or kf.from_translate is not None:

@@ -200,6 +200,32 @@ def test_audit_defaults_to_check_animation_output(tmp_path: Path, monkeypatch) -
     assert "WARNING demo narration: needs review" in result.output
 
 
+def test_audit_reports_migration_warning_when_visual_audit_is_clean(
+    tmp_path: Path, monkeypatch
+) -> None:
+    input_file = tmp_path / "legacy.json"
+    input_file.write_text(
+        Path("examples/algorithms/bubble_sort.json").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    monkeypatch.setattr(
+        "kaivra.mcp.workspace.KaivraWorkspace.check_animation",
+        lambda *args, **kwargs: {
+            "valid": True,
+            "audit_findings": [],
+            "blocking_issues": [],
+            "warnings": ["VERSION: update this legacy document to DSL 1.5."],
+        },
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["audit", str(input_file)])
+
+    assert result.exit_code == 0, result.output
+    assert "VERSION: update this legacy document to DSL 1.5." in result.output
+    assert "Audit passed: no issues found." not in result.output
+
+
 def test_audit_layout_only_uses_sampled_layout_path(tmp_path: Path, monkeypatch) -> None:
     input_file = tmp_path / "demo.json"
     input_file.write_text(

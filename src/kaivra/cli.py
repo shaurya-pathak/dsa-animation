@@ -392,7 +392,10 @@ def audit(ctx: click.Context, input_file: str, layout_only: bool, samples: int |
 
     if not layout_only:
         checked = KaivraWorkspace().check_animation(file_path=str(Path(input_file).resolve()))
-        if checked["valid"] and not checked["audit_findings"]:
+        # `warnings` also carries non-layout authoring guidance such as a
+        # legacy DSL migration notice.  Do not suppress those just because the
+        # sampled visual audit itself found no issues.
+        if checked["valid"] and not checked["warnings"]:
             click.echo("Audit passed: no issues found.")
             return
 

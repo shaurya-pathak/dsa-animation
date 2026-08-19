@@ -47,6 +47,7 @@ class _EmphasisEvent:
     start: float
     scene_order: int
     target_content: str = ""
+    cue_phrase: str | None = None
 
 
 def retime_document_to_audio_timings(
@@ -305,6 +306,11 @@ def _collect_cue_aligned_events(
     for idx, anim in enumerate(scene.get("animations", []) or []):
         if not isinstance(anim, dict):
             continue
+        # Dependent beats inherit timing from their anchor. Giving them their own
+        # speech match would break the authored causal chain and can create an
+        # invalid `at` + `after` combination in the retimed document.
+        if anim.get("after") or anim.get("anchor"):
+            continue
         action = anim.get("action")
         targets = _normalize_targets(anim.get("target"))
         if action in EMPHASIS_ACTIONS:
@@ -325,7 +331,15 @@ def _collect_cue_aligned_events(
         else:
             continue
 
-        target_content = _targets_to_content(targets, content_index)
+        explicit_cue = anim.get("cue")
+        cue_phrase = (
+            explicit_cue.strip() if isinstance(explicit_cue, str) and explicit_cue.strip() else None
+        )
+        target_content = (
+            cue_phrase.lower()
+            if cue_phrase is not None
+            else _targets_to_content(targets, content_index)
+        )
         events.append(
             _EmphasisEvent(
                 kind=event_kind,
@@ -333,6 +347,7 @@ def _collect_cue_aligned_events(
                 start=_parse_time(anim.get("at"), 0.0),
                 scene_order=idx,
                 target_content=target_content,
+                cue_phrase=cue_phrase,
             )
         )
 
@@ -367,17 +382,41 @@ def _match_cues_to_events(
     sorted_cues = sorted(cues, key=lambda c: c.start_seconds)
     result: list[AudioCue | None] = [None] * len(events)
 
+    # Explicit authored cue phrases are exact timing anchors. Resolve them
+    # first, across both provider phrase cues and fallback one-word cues, then
+    # keep every participating cue out of the looser semantic/positional pass.
+    used_events: set[int] = set()
+    used_cues: set[int] = set()
+    for event_index, event in enumerate(events):
+        if not event.cue_phrase:
+            continue
+        match = _find_contiguous_cue_match(sorted_cues, event.cue_phrase)
+        if match is None:
+            available = _available_cue_text(sorted_cues)
+            raise ValueError(
+                f"Animation cue {event.cue_phrase!r} could not be matched as a contiguous, "
+                "punctuation-normalized phrase in the supplied audio cues. "
+                f"Available cue text: {available}. Use the exact spoken phrase or omit the "
+                "timing sidecar for the authored `at` fallback."
+            )
+        first_index, matched_indices = match
+        result[event_index] = sorted_cues[first_index]
+        used_events.add(event_index)
+        used_cues.update(matched_indices)
+
     # Phase 1: Semantic matching — pair cues to events by content similarity.
     scores: list[tuple[float, int, int]] = []
     for ei, event in enumerate(events):
+        if ei in used_events:
+            continue
         for ci, cue in enumerate(sorted_cues):
+            if ci in used_cues:
+                continue
             score = _semantic_score(cue.text or "", event.target_content)
             if score > 0:
                 scores.append((score, ei, ci))
 
     scores.sort(key=lambda x: -x[0])
-    used_events: set[int] = set()
-    used_cues: set[int] = set()
 
     for score, ei, ci in scores:
         if ei not in used_events and ci not in used_cues:
@@ -394,6 +433,48 @@ def _match_cues_to_events(
             result[ue_idx] = cue
 
     return result
+
+
+def _find_contiguous_cue_match(
+    cues: list[AudioCue],
+    phrase: str,
+) -> tuple[int, set[int]] | None:
+    """Find an exact normalized phrase in chronological phrase or word cues.
+
+    The returned first index is the timing source for the anchor, while all cue
+    indices supplying the phrase are reserved so positional fallback cannot
+    assign part of the same spoken phrase to another animation.
+    """
+    needle = _normalize_cue_tokens(phrase)
+    if not needle:
+        return None
+
+    tokens: list[tuple[str, int]] = []
+    for cue_index, cue in enumerate(cues):
+        tokens.extend((token, cue_index) for token in _normalize_cue_tokens(cue.text or ""))
+
+    phrase_length = len(needle)
+    for index in range(len(tokens) - phrase_length + 1):
+        window = tokens[index : index + phrase_length]
+        if tuple(token for token, _cue_index in window) == needle:
+            return window[0][1], {cue_index for _token, cue_index in window}
+    return None
+
+
+def _normalize_cue_tokens(text: str) -> tuple[str, ...]:
+    normalized = re.sub(r"[\W_]+", " ", text.casefold(), flags=re.UNICODE)
+    return tuple(token for token in normalized.split() if token)
+
+
+def _available_cue_text(cues: list[AudioCue]) -> str:
+    values = [" ".join(_normalize_cue_tokens(cue.text or "")) for cue in cues]
+    nonempty = [value for value in values if value]
+    if not nonempty:
+        return "<cue entries did not include text>"
+    summary = "; ".join(nonempty[:4])
+    if len(nonempty) > 4:
+        summary += f"; … ({len(nonempty) - 4} more)"
+    return summary
 
 
 def _distribute_positionally(
