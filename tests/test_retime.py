@@ -1,3 +1,5 @@
+import pytest
+
 from kaivra.audio.timings import AudioCue, AudioTimingData, SceneAudioTiming
 from kaivra.dsl.retime import (
     estimate_scene_duration,
@@ -8,7 +10,7 @@ from kaivra.dsl.retime import (
 
 def test_retime_scales_scene_animations_and_duration():
     document = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {
             "title": "Test",
             "theme": "modern",
@@ -62,7 +64,7 @@ def test_estimate_scene_duration_uses_auto_timeline():
 
 def test_audio_cues_align_scene_local_emphasis_but_leave_global_step_glow_broad():
     document = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Test", "theme": "modern"},
         "objects": [
             {"type": "token", "id": "step_compare", "content": "Compare"},
@@ -116,7 +118,7 @@ def test_audio_cues_align_scene_local_emphasis_but_leave_global_step_glow_broad(
 
 def test_duration_only_retime_scales_scene_local_emphasis_without_inferred_beats():
     document = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Test", "theme": "modern"},
         "objects": [{"type": "token", "id": "step_compare", "content": "Compare"}],
         "scenes": [
@@ -153,7 +155,7 @@ def test_duration_only_retime_scales_scene_local_emphasis_without_inferred_beats
 
 def test_audio_cues_align_reveals_to_narration_windows() -> None:
     document = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Test", "theme": "modern"},
         "scenes": [
             {
@@ -202,7 +204,7 @@ def test_audio_cues_align_reveals_to_narration_windows() -> None:
 
 def test_retime_preserves_selected_pacing_baseline_when_meta_fields_are_missing():
     document = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {
             "title": "Test",
             "theme": "modern",
@@ -230,7 +232,7 @@ def test_retime_preserves_selected_pacing_baseline_when_meta_fields_are_missing(
 def test_semantic_matching_pairs_cues_to_target_content():
     """Word cues should match animation targets by content, not position."""
     document = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Test", "theme": "modern"},
         "scenes": [
             {
@@ -275,10 +277,178 @@ def test_semantic_matching_pairs_cues_to_target_content():
     assert scene["animations"][2]["at"] == "1s"
 
 
+def test_explicit_animation_cue_overrides_target_content_for_matching() -> None:
+    document = {
+        "version": "1.5",
+        "meta": {"title": "Test", "theme": "editorial"},
+        "scenes": [
+            {
+                "id": "demo",
+                "duration": "8s",
+                "objects": [{"type": "text", "id": "number", "content": "0.57"}],
+                "animations": [
+                    {
+                        "action": "fade-in",
+                        "id": "show_number",
+                        "target": "number",
+                        "at": "1s",
+                        "cue": "becomes point five seven",
+                        "duration": "0.4s",
+                    },
+                    {
+                        "action": "pulse",
+                        "target": "number",
+                        "after": "show_number",
+                        "duration": "0.4s",
+                    },
+                ],
+            }
+        ],
+    }
+    timing_data = AudioTimingData(
+        scenes={
+            "demo": SceneAudioTiming(
+                id="demo",
+                duration_seconds=8.0,
+                cues=(
+                    AudioCue(
+                        start_seconds=4.2,
+                        duration_seconds=0.8,
+                        text="becomes point five seven",
+                    ),
+                ),
+            )
+        }
+    )
+
+    retimed = retime_document_to_audio_timings(document, timing_data)
+    assert retimed["scenes"][0]["animations"][0]["at"] == "4.2s"
+    assert retimed["scenes"][0]["animations"][1]["after"] == "show_number"
+    assert "at" not in retimed["scenes"][0]["animations"][1]
+
+
+def test_explicit_animation_cue_matches_contiguous_estimated_word_cues() -> None:
+    document = {
+        "version": "1.5",
+        "meta": {"title": "Test", "theme": "editorial"},
+        "scenes": [
+            {
+                "id": "demo",
+                "duration": "8s",
+                "objects": [{"type": "text", "id": "number", "content": "0.57"}],
+                "animations": [
+                    {
+                        "action": "fade-in",
+                        "target": "number",
+                        "at": "1s",
+                        "cue": "the right, value",
+                        "duration": "0.4s",
+                    },
+                ],
+            }
+        ],
+    }
+    timing_data = AudioTimingData(
+        scenes={
+            "demo": SceneAudioTiming(
+                id="demo",
+                duration_seconds=8.0,
+                cues=(
+                    AudioCue(start_seconds=0.5, duration_seconds=0.1, text="the"),
+                    AudioCue(start_seconds=0.7, duration_seconds=0.1, text="wrong"),
+                    AudioCue(start_seconds=2.0, duration_seconds=0.1, text="THE"),
+                    AudioCue(start_seconds=2.2, duration_seconds=0.1, text="right"),
+                    AudioCue(start_seconds=2.4, duration_seconds=0.1, text="value!"),
+                ),
+            )
+        }
+    )
+
+    retimed = retime_document_to_audio_timings(document, timing_data)
+
+    assert retimed["scenes"][0]["animations"][0]["at"] == "2s"
+
+
+def test_explicit_animation_cue_keeps_authored_at_without_timing_cues() -> None:
+    """A silent render must retain the authored timing fallback."""
+    document = {
+        "version": "1.5",
+        "meta": {"title": "Test", "theme": "editorial"},
+        "scenes": [
+            {
+                "id": "demo",
+                "duration": "8s",
+                "objects": [{"type": "text", "id": "number", "content": "0.57"}],
+                "animations": [
+                    {
+                        "id": "show_number",
+                        "action": "fade-in",
+                        "target": "number",
+                        "at": "1.5s",
+                        "cue": "becomes point five seven",
+                        "duration": "0.4s",
+                    },
+                    {
+                        "action": "pulse",
+                        "target": "number",
+                        "after": "show_number",
+                        "duration": "0.4s",
+                    },
+                ],
+            }
+        ],
+    }
+    timing_data = AudioTimingData(
+        scenes={"demo": SceneAudioTiming(id="demo", duration_seconds=8.0, cues=())}
+    )
+
+    retimed = retime_document_to_audio_timings(document, timing_data)
+    animations = retimed["scenes"][0]["animations"]
+
+    assert animations[0]["at"] == "1.5s"
+    assert animations[1]["after"] == "show_number"
+    assert "at" not in animations[1]
+
+
+def test_explicit_animation_cue_fails_clearly_when_timing_data_cannot_match() -> None:
+    document = {
+        "version": "1.5",
+        "meta": {"title": "Test", "theme": "editorial"},
+        "scenes": [
+            {
+                "id": "demo",
+                "duration": "8s",
+                "objects": [{"type": "text", "id": "number", "content": "0.57"}],
+                "animations": [
+                    {
+                        "action": "fade-in",
+                        "target": "number",
+                        "at": "1s",
+                        "cue": "becomes point five seven",
+                        "duration": "0.4s",
+                    },
+                ],
+            }
+        ],
+    }
+    timing_data = AudioTimingData(
+        scenes={
+            "demo": SceneAudioTiming(
+                id="demo",
+                duration_seconds=8.0,
+                cues=(AudioCue(start_seconds=1.0, duration_seconds=0.5, text="the value changes"),),
+            )
+        }
+    )
+
+    with pytest.raises(ValueError, match="could not be matched as a contiguous"):
+        retime_document_to_audio_timings(document, timing_data)
+
+
 def test_scene_duration_never_shrinks_below_authored():
     """When TTS audio is shorter than authored duration, keep the authored duration."""
     document = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Test", "theme": "modern"},
         "scenes": [
             {
@@ -313,7 +483,7 @@ def test_scene_duration_never_shrinks_below_authored():
 def test_semantic_matching_uses_spoken_forms_aliases():
     """spoken_forms let cue matching handle alternate pronunciations/transcripts."""
     document = {
-        "version": "1.3",
+        "version": "1.5",
         "meta": {"title": "Test", "theme": "modern"},
         "scenes": [
             {

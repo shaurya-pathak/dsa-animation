@@ -108,3 +108,13 @@ def test_validate_voice_provider_setup_requires_openai_key(monkeypatch):
     with patch("kaivra.audio.base.importlib.metadata.entry_points", return_value=[ep]):
         with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
             validate_voice_provider_setup("openai")
+
+
+def test_validate_voice_provider_setup_accepts_qwen_install():
+    ep = _make_entry_point("qwen", DummyProvider)
+    with (
+        patch("kaivra.audio.base.importlib.metadata.entry_points", return_value=[ep]),
+        patch("kaivra_voice.qwen.resolve_qwen_tts_paths") as resolve_paths,
+    ):
+        assert validate_voice_provider_setup("qwen") == "qwen"
+    resolve_paths.assert_called_once_with(worker_path=None, models_path=None)

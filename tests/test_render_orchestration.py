@@ -35,6 +35,9 @@ def test_render_document_artifact_voice_pipeline_normalizes_and_concats_wav(tmp_
                 ),
             )
 
+        def close(self) -> None:
+            steps.append(("close",))
+
     class DummyRegistry:
         def discover(self) -> None:
             steps.append(("discover",))
@@ -57,6 +60,7 @@ def test_render_document_artifact_voice_pipeline_normalizes_and_concats_wav(tmp_
 
     def fake_build_render_graph(_doc, **_kwargs):
         steps.append(("retime", _doc.meta.show_subtitles, [scene.id for scene in _doc.scenes]))
+        steps.append(("fit-to-audio", _kwargs.get("fit_scene_durations_to_audio")))
         timing_data = _kwargs.get("audio_timing_data")
         if timing_data is not None:
             steps.append(
@@ -132,11 +136,13 @@ def test_render_document_artifact_voice_pipeline_normalizes_and_concats_wav(tmp_
         False,
         ["__kaivra_video_intro__", "intro", "__kaivra_video_outro__"],
     ) in steps
+    assert ("fit-to-audio", True) in steps
     assert ("normalize", ".mp3", ".wav") in steps
-    assert ("leadin", "narrated_intro_leadin.wav", 0.65) in steps
+    assert ("leadin", "narrated_intro_leadin.wav", 0.25) in steps
     assert ("cues", 1, "Hello") in steps
     assert ("concat", [".wav", ".wav", ".wav"], ".wav") in steps
     assert ("mux", ".wav", ".mp4") in steps
+    assert ("close",) in steps
     assert not [step for step in steps if step[0] == "pad"]
     assert "Discovering voice provider: dummy." in progress_messages
     assert "Generating voice for scene intro." in progress_messages
@@ -147,14 +153,73 @@ def test_render_document_artifact_voice_pipeline_normalizes_and_concats_wav(tmp_
 
     retimed = json.loads(Path(result.retimed_document_path).read_text(encoding="utf-8"))
     assert retimed["scenes"][0]["id"] == "__kaivra_video_intro__"
-    # Bookend scenes keep their authored duration when TTS audio is shorter.
-    assert retimed["scenes"][0]["duration"] == "3.8s"
-    assert retimed["scenes"][1]["duration"] == "3.45s"
+    # Voice sidecars record the graph's exact measured-audio durations.
+    assert retimed["scenes"][0]["duration"] == "2.25s"
+    assert retimed["scenes"][1]["duration"] == "2.9s"
     assert retimed["scenes"][-1]["id"] == "__kaivra_video_outro__"
-    assert retimed["scenes"][-1]["duration"] == "3.4s"
+    assert retimed["scenes"][-1]["duration"] == "2.25s"
 
 
-def test_openai_voice_pipeline_uses_scene_level_timing_without_word_cues(tmp_path, monkeypatch):
+def test_retimed_sidecar_preserves_semantic_timing_tokens(tmp_path):
+    doc = parse_string(
+        json.dumps(
+            {
+                "version": "1.5",
+                "meta": {"title": "Semantic timing", "theme": "editorial"},
+                "scenes": [
+                    {
+                        "id": "intro",
+                        "duration": "8s",
+                        "objects": [{"id": "number", "type": "text", "content": "64%"}],
+                        "animations": [
+                            {
+                                "action": "fade-in",
+                                "target": "number",
+                                "at": "short",
+                                "cue": "sixty four percent",
+                                "duration": "short",
+                                "stagger": "short",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        format="json",
+    )
+    timing_data = orchestration.AudioTimingData(
+        scenes={
+            "intro": orchestration.SceneAudioTiming(
+                id="intro",
+                duration_seconds=8.0,
+                cues=(
+                    orchestration.AudioCue(
+                        start_seconds=1.0,
+                        duration_seconds=0.5,
+                        text="sixty four percent",
+                    ),
+                ),
+            )
+        }
+    )
+
+    sidecar_path = orchestration._write_retimed_sidecar(
+        doc,
+        tmp_path / "semantic.mp4",
+        audio_timing_data=timing_data,
+    )
+
+    assert sidecar_path is not None
+    animation = json.loads(Path(sidecar_path).read_text(encoding="utf-8"))["scenes"][0][
+        "animations"
+    ][0]
+    assert animation["at"] == "short"
+    assert animation["duration"] == "short"
+    assert animation["stagger"] == "short"
+    assert animation["cue"] == "sixty four percent"
+
+
+def test_openai_voice_pipeline_estimates_word_cues_from_measured_audio(tmp_path, monkeypatch):
     doc = _narrated_doc()
     raw_audio = tmp_path / "intro.wav"
     raw_audio.write_bytes(b"raw")
@@ -217,7 +282,21 @@ def test_openai_voice_pipeline_uses_scene_level_timing_without_word_cues(tmp_pat
         voice_provider="openai",
     )
 
-    assert captured_cue_counts == [0]
+    assert captured_cue_counts == [2]
+
+
+def test_estimated_narration_word_cues_preserve_order_duration_and_lead_in() -> None:
+    cues = orchestration._estimate_narration_word_cues(
+        "Tiny steps matter",
+        2.4,
+        offset_seconds=0.65,
+    )
+
+    assert [cue.text for cue in cues] == ["Tiny", "steps", "matter"]
+    assert all(cue.kind == "estimated-word" for cue in cues)
+    assert cues[0].start_seconds == 0.65
+    assert cues[0].start_seconds < cues[1].start_seconds < cues[2].start_seconds
+    assert round(cues[-1].start_seconds + cues[-1].duration_seconds, 3) == 3.05
 
 
 def test_voice_pipeline_pads_audio_to_match_retimed_video_duration(tmp_path, monkeypatch):
@@ -443,8 +522,13 @@ def test_local_voice_render_forces_subtitles_off_and_spokenizes_narration(tmp_pa
     local_doc = parse_string(
         json.dumps(
             {
-                "version": "1.3",
-                "meta": {"title": "Narrated", "theme": "modern", "show_subtitles": True},
+                "version": "1.5",
+                "meta": {
+                    "title": "Narrated",
+                    "theme": "modern",
+                    "show_subtitles": True,
+                    "video_bookends": True,
+                },
                 "scenes": [
                     {
                         "id": "intro",
@@ -474,7 +558,7 @@ def test_web_preview_html_includes_transition_and_highlight_preview_logic() -> N
     doc = parse_string(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"title": "Preview", "theme": "modern"},
                 "scenes": [
                     {
@@ -500,8 +584,9 @@ def test_web_preview_html_includes_transition_and_highlight_preview_logic() -> N
 
     html = build_web_preview_html(doc)
 
-    assert "return { scene, sceneIndex: index, localTime, blend, nextScene, nextLocalTime }" in html
-    assert "if (blend > 0 && nextScene)" in html
+    assert "return { scene, sceneIndex: index, localTime, sceneAlpha }" in html
+    assert "renderScene(ctx, scene, localTime, sceneAlpha);" in html
+    assert "nextLocalTime" not in html
     assert "if (progress < 0.25) return progress / 0.25;" in html
     assert "drawHighlight(ctx, node);" in html
 
@@ -510,7 +595,7 @@ def _narrated_doc(
     *,
     show_subtitles: bool | None = None,
     legacy_show_narration: bool | None = None,
-    video_bookends: bool | None = None,
+    video_bookends: bool | None = True,
 ):
     meta = {"title": "Narrated", "theme": "modern"}
     if show_subtitles is not None:
@@ -523,7 +608,7 @@ def _narrated_doc(
     return parse_string(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": meta,
                 "scenes": [
                     {

@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from kaivra.dsl.schema import DocumentSpec
+from kaivra.mcp.story_contract import (
+    REQUIRED_STORY_CONTRACT_SECTIONS,
+    story_contract_template,
+)
 
 RESOURCE_DEFINITIONS = [
     {
@@ -14,6 +18,20 @@ RESOURCE_DEFINITIONS = [
         "name": "authoring_profile",
         "title": "Kaivra Authoring Profile",
         "description": "The recommended subset of the Kaivra DSL for local MCP-guided authoring.",
+        "mimeType": "text/markdown",
+    },
+    {
+        "uri": "kaivra://story-contract",
+        "name": "story_contract",
+        "title": "Story-First Explainer Contract",
+        "description": "Required Markdown contract and template for beginner explainers.",
+        "mimeType": "text/markdown",
+    },
+    {
+        "uri": "kaivra://capability-escalation",
+        "name": "capability_escalation",
+        "title": "Creative Capability Escalation",
+        "description": "How to request an approved visual primitive that Kaivra does not yet support.",
         "mimeType": "text/markdown",
     },
     {
@@ -59,6 +77,20 @@ RESOURCE_DEFINITIONS = [
         "mimeType": "application/json",
     },
     {
+        "uri": "kaivra://example/system_storyboard_demo",
+        "name": "example_system_storyboard_demo",
+        "title": "Reference Example: System Storyboard Demo",
+        "description": "General-purpose reference example JSON for the system_storyboard pattern.",
+        "mimeType": "application/json",
+    },
+    {
+        "uri": "kaivra://example/qa_copilot_storyboard",
+        "name": "example_qa_copilot_storyboard",
+        "title": "Reference Example: QA Copilot Storyboard",
+        "description": "Acceptance example JSON for a dense operational storyboard.",
+        "mimeType": "application/json",
+    },
+    {
         "uri": "kaivra://document-schema",
         "name": "document_schema",
         "title": "Document Schema",
@@ -77,6 +109,8 @@ def read_resource(uri: str) -> dict[str, Any]:
     """Return the contents for a Kaivra MCP resource."""
     content_map = {
         "kaivra://authoring-profile": _authoring_profile(),
+        "kaivra://story-contract": _story_contract_resource(),
+        "kaivra://capability-escalation": _capability_escalation_resource(),
         "kaivra://pattern-catalog": _pattern_catalog(),
         "kaivra://theme-catalog": _theme_catalog(),
         "kaivra://example-catalog": _example_catalog(),
@@ -84,6 +118,12 @@ def read_resource(uri: str) -> dict[str, Any]:
         "kaivra://example/forward_propagation": _reference_example_text("forward_propagation.json"),
         "kaivra://example/perspectiv_medcase_process_explainer": _reference_example_text(
             "perspectiv_medcase_process_explainer.json"
+        ),
+        "kaivra://example/system_storyboard_demo": _reference_example_text(
+            "system_storyboard_demo.json"
+        ),
+        "kaivra://example/qa_copilot_storyboard": _reference_example_text(
+            "qa_copilot_storyboard.json"
         ),
         "kaivra://document-schema": json.dumps(DocumentSpec.model_json_schema(), indent=2),
     }
@@ -102,61 +142,192 @@ def read_resource(uri: str) -> dict[str, Any]:
     }
 
 
+def _story_contract_resource() -> str:
+    sections = "\n".join(f"- **{label}**" for label, _aliases in REQUIRED_STORY_CONTRACT_SECTIONS)
+    return f"""# Story-First Explainer Contract
+
+For every layperson explainer, create and review `<slug>.story.md` before
+writing `<slug>.json`. Set `meta.story_contract` to that filename. The MCP
+blocks file-backed layperson checks, previews, and renders when the paired
+contract is missing or incomplete.
+
+## Source of truth
+
+Translate the user's intention, examples, and constraints into this document.
+Examples demonstrate DSL syntax only: never copy their composition, numbers,
+claims, objects, motion language, or scene order into a new animation. The
+approved brief and choreography—not a nearby JSON file—are the golden contract
+for the creative director, specialist reviewers, and renderers.
+
+## Required sections
+
+{sections}
+
+## Hard rules
+
+- Translate the user's underlying intention into a before-and-after learner
+  transformation; examples, values, and proposed scenes are illustrative, not
+  a script to reproduce.
+- Start with a familiar question. Introduce the technical name only after the
+  viewer has a reason to care.
+- State one transferable mental model, map every everyday element to the real
+  mechanism, and say where the analogy stops.
+- Show what happened earlier, what is fixed now, and what appears afterward.
+  Do not make learned settings look live or arbitrary.
+- Never show a number, formula, or conclusion before its everyday meaning and
+  causal visual proof are visible.
+- Explain why an operation happens and what visibly changes afterward. A label,
+  equation, or arrow alone is not an explanation.
+- Give a result a stable name before it changes; when a value moves to a new
+  scale, show what stays the same and why the new scale exists.
+- Keep one continuous causal world. Reuse the case, learned rules, and running
+  state instead of resetting into disconnected slides.
+- Include a counterfactual or contrast the viewer can predict before reveal.
+- Introduce only mechanisms needed to answer the viewer's question. Omit or
+  explicitly defer extra layers, activations, or domain detail.
+- Give each movement one dominant visual argument and one visible state change.
+- Keep the authoring strategy in this contract, not in the finished narration.
+  Do not announce that the video will teach, explain, unpack, slow down, or
+  walk through the topic.
+- Reject generic slogan copy made from symmetrical fragments such as “ONE
+  INPUT · ONE ANSWER.” Do not put meta labels such as “TECHNICAL NAME,” “KEY
+  TAKEAWAY,” or “WHAT WE LEARNED” on screen; show the real concept or state.
+
+## Required review gates
+
+- **Sound-off:** a novice can identify the real-world case, current
+  observation, stored rule, changing state, and answer in any paused frame.
+- **Teach-back:** they can explain the causal path without technical labels.
+- **Counterfactual:** they can predict how a changed input moves the result.
+- **Scale-change:** they can explain why a raw value and a readable estimate
+  differ without claiming new evidence appeared.
+
+## Template
+
+```markdown
+{story_contract_template("Example Explainer").rstrip()}
+```
+"""
+
+
 def _authoring_profile() -> str:
     return """# Kaivra Authoring Profile
 
 ## Defaults
 
-- `process_explainer` for narrated explainers, `algorithm_walkthrough` for silent demos.
+- `motion_explainer` for narrated explainers. It builds one evolving visual world instead of one composition per beat.
 - `pacing: educational` for narrated, `balanced` for silent.
 - `audience: mixed` by default, but still write for clarity first. Use plain spoken English and avoid file paths, repo names, or module inventories in narration unless the user explicitly wants implementation detail.
 - Use `layperson` when you want the checker to push back even harder on jargon, repo names, file paths, and code identifiers in narration.
-- `modern` theme by default, `whiteboard` for sketch-style teaching.
+- The selected theme supplies color and typography only. It must not determine scene composition.
+- New or unversioned v1.5 documents default to `editorial` with bookends, subtitles, and scene progress bars disabled. Put metadata inside `meta`; v1.5 rejects unknown top-level fields. Version 1.4 and older preserve the prior `whiteboard` and enabled chrome defaults when those fields are omitted.
+
+## Story Before Scenes
+
+- Translate the user's underlying learning goal before drafting scenes. Their
+  examples, values, and requested beats are evidence of intent, not a script to
+  copy.
+- Write the learner's Before and After state, one transferable mental model,
+  the training-versus-prediction boundary, and a misconception map before JSON
+  authoring.
+- Agree on one viewer question, one familiar causal model, and a short
+  belief-changing choreography path before JSON authoring begins.
+- Let everyday action and a visible transformation teach the mechanism before
+  technical vocabulary and equations appear.
+- After the action is clear, put the correct technical name beside the actor.
+  A learned multiplier is a weight; a bias is a separate added baseline.
+- Show a named function when its shape teaches the mapping. Use
+  `sigmoid_plot` for score-to-probability explanations instead of hiding the
+  transformation inside a generic box.
+- Run sound-off, teach-back, counterfactual, and scale-change checks before
+  rendering.
+
+- For every layperson explainer, create and read `<slug>.story.md` before writing `<slug>.json`; set `meta.story_contract` to the sidecar filename.
+- Translate the user's intention, examples, and constraints into the story contract first. Examples demonstrate syntax only; never copy their composition, equation sequence, or claims into DSL.
+- Use `kaivra://story-contract` for the required headings and hard rules. A file-backed layperson explainer cannot pass `check_animation`, `preview_animation`, or `render_animation` without a complete paired contract.
+- Agree on one viewer question and a short choreography path before JSON authoring begins.
+- Open with the question, tension, visible change, or surprising number. Do not open with a welcome screen or agenda.
+- Give each movement one narrative job and one visible state change.
+- One creative director owns the complete spatial and motion continuum. Specialist agents review focused concerns; they do not compose isolated scenes.
+- Verify the beat path and choreography map before JSON authoring. Preserve actor identity and spatial causality across edit boundaries.
+- If the approved teaching move needs an unsupported reusable primitive, stop
+  JSON authoring and file a structured capability escalation. Creative approval
+  approves the story, not implementation readiness.
 
 ## Scene Construction
 
-- Prefer `template: "one-column"` (or `"two-column"`) on every scene for top-level framing.
-- `template: "one-column"` now supports semantic regions through `grid.region`: `problem_solution`, `request_pipeline`, `fan_out`, `system_architecture`, and `timeline_steps`.
-- Keep `main` for backward compatibility, but use the semantic region names when the scene is actually explaining one of those structures.
-- Build scenes from `box`, `group`, `connector`, `token`, and short `text` headings.
-- Use `draw` on connectors to animate flow and causality.
-- Each scene should have enough objects to fully illustrate the concept.
+- Do not begin a narrated explainer from `editorial`, `storyboard`, `one-column`, or `two-column` templates. Those remain compatibility tools for intentionally document-like material.
+- Build the composition from the subject's actors, forces, transformations, and reading path.
+- Treat scene boundaries as edit and render segments, not permission to reset into a title, body, and footer slide.
+- A repeated heading, stage label, row of cards, or chapter rail is a blocked draft unless that object is part of the subject itself.
+- Start with `text`, large `metric` text, `circle`, and `connector`. Add `box` only when a visible boundary is part of the concept.
+- Use `linear_meter` for a bounded quantity or signed lean. Use `sigmoid_plot`
+  when a learner needs to see how an internal score maps onto a probability;
+  set `sigmoid_input` and readable input/output labels, and let the renderer
+  derive the plotted point.
+- Label a learned multiplier as `WEIGHT` only after its scaling action is
+  understandable. Never label a multiplier as bias; bias is a distinct value
+  added to the combined score.
+- Use `hero-heading`, `metric`, `metric-coral`, `metric-cyan`, `metric-gold`, and `annotation` as direct-on-canvas typography roles. Reserve `success`, `warning`, and `error` variants for actual status, not explanatory channels.
+- Keep on-screen copy to fragments, labels, values, and symbols. Narration carries complete sentences; the frame should not transcribe them.
+- Screen fragments must belong to the subject. Do not manufacture editorial
+  taglines, eyebrow headings, or “ONE X · ONE Y” slogans to fill empty space.
+  Empty space is preferable to a caption a human author would not naturally
+  choose.
+- Author signed metrics as one natural value such as `-0.40`; the engine automatically hangs a compact sign beside the aligned magnitude. Use separate `operator` objects only for standalone operations that need to move or disappear.
+- Show arithmetic when possible: reveal an operator, move it into the destination node with `move-to`, then fade it out as the result changes.
+- Use `draw` to establish a connector, then `flow` to carry a visible signal from source to destination.
+- Use the fewest objects that make the idea immediately understandable. Empty space is useful when it strengthens the reading path.
 
 ## Layout Essentials
 
 **This is critical.** Flat object lists with the default `center` layout stack everything on the same point, producing massive overlaps.
 
-- If you are not using a scene template, set scene-level `layout.type` to `"stack"` so top-level objects flow vertically.
-- Wrap related objects in `group` containers with `layout.type: "flow"` (horizontal rows) or `"stack"` (vertical columns).
+- Build a small number of subject-specific groups whose spatial relationship explains the idea.
+- Use `flow`, `stack`, `grid`, and `split` as low-level geometry tools, not as page-layout recipes.
 - Available layout types: `center`, `grid`, `flow`, `stack`, `split`, `carousel`.
 - Use `gap: "small" | "medium" | "large"` on groups to control spacing.
 - Use `direction: "horizontal" | "vertical"` on flow/stack layouts.
-- Use scene-level `layout` with a template only when you intentionally want to override the template defaults.
-- When mixing semantic regions and generic `main` objects in one `one-column` scene, remember that `main` still covers the full body lane for backward compatibility. Prefer semantic regions for all major blocks in that scene.
+- If a legacy template is required, treat it as an explicit product choice and keep it out of the default narrated workflow.
 
 **Connector overlap:** The engine does not auto-route connectors. If `check_animation` flags crossover warnings, reorder objects within their group so connected nodes are adjacent, or split objects into smaller groups to keep connector paths clear.
 
 ## Document-Level Objects
 
-- Prefer persistent objects in the top-level `objects` array whenever labels, legends, chapter rails, or shared state should carry across scenes.
-- Persistent objects in the top-level `objects` array appear in every scene (when `include_persistent_objects: true`).
-- For multi-scene explainers, add a carousel chapter tracker: a group of tokens with `layout.type: "carousel"` and `position: "bottom"`. In each scene, `highlight` + `scale` the active step token so the viewer knows where they are.
+- Persist story actors, values, and physical context only when the viewer must see them change over time.
+- Do not auto-create headings, labels, legends, chapter rails, progress dots, or navigation chrome.
+- Persistent objects appear in every scene when `include_persistent_objects: true`; use that capability for the causal world, not presentation furniture.
 
 ## Animation and Reveals
 
-- Use `fade-in` for reveals — it animates opacity smoothly. `appear` is an instant pop; only use it when you want a hard cut.
-- Start scene objects hidden (`auto_visible: false`) and reveal them with staggered `fade-in` timings that track the narration.
+- Choreograph transformations first: `move-to`, `replace`, `draw`, `flow`, and meaningful scale changes should show what happened.
+- Use `fade-in` or `appear` only for genuine entrances. Opacity changes are not an explanation.
+- Never add pulse, glow, bounce, repeated highlighting, or idle motion merely to make a static composition feel animated.
+- For narrated reveals, add an explicit `cue` phrase and an authored `at` fallback. Voice renders use the cue; silent previews use `at`.
+- Chain dependent movement with animation IDs plus `after`; one speech cue should anchor one visual beat.
+- Do not use `reveal-children` for multiple independently spoken text items. Reveal each item in spoken order.
 - Use `draw` on connectors to animate them in. Connectors without `draw` appear instantly.
+- Follow `draw` with `flow` when the viewer needs to see direction or causality along an established path.
 - `fade-in` on a group ID reveals the group and all its children. You don't need separate animations for children unless you want them staggered.
 - Layout-only container groups under `auto_visible: false` should usually set `visible: true` unless you plan to animate the group itself.
 
 ## Narration
 
 - Write narration as conversational spoken English with contractions and direct address. Not "Title. Definition."
+- Read every line aloud. Rewrite anything that sounds like a heading, caption, documentation paragraph, or list.
+- Speak like a teacher beside the learner: use familiar invitations such as "let's assume", "let's look at", and "what do you think should happen?" when they help the viewer participate.
+- State assumptions as shared setup. Prefer "Let's assume we already have a trained model, and let's say it only looks for two clues" over detached shorthand such as "the learning already happened."
+- Do not begin with "Welcome", "In this video", or "Today we will". Start with the idea.
+- Do not narrate the teaching plan anywhere: no "I'm going to show you", "we'll
+  walk through", "let's slow this down", "we're about to see", or "first I'll
+  explain". Shared assumptions and genuine questions can use "we"; production
+  reasoning cannot leak into the spoken output.
+- Narration should interpret what is visible, not read every label or equation verbatim.
 - Default to an understandable explainer voice even for `mixed` audiences. Explain the user-facing process, not the repo structure.
 - Mention labels and values in the order you want reveals to land.
-- Let the explanation determine scene length.
-- `check_animation` reports estimated read time at roughly 150 WPM. Use that timing guidance before previewing a narrated render.
+- Let the explanation determine scene length. Authored duration is the silent-render fallback; a voice render synthesizes first and fits each scene to measured audio plus the configured lead and hold. Never guess voice duration from word count.
+- `check_animation` reports estimated read time at roughly 150 WPM. Treat that as a comprehension warning for silent fallback timing, not a source of truth for voice duration. Voice renders measure the generated audio directly; verify the resulting pauses by listening.
+- Aim for about one second of combined tail and lead-in between adjacent narrated movements. Silence longer than two seconds needs a deliberate prediction, comparison, or teach-back job.
 
 ## Voice Sync Checklist
 
@@ -177,18 +348,21 @@ Object: `{ "id": "server", "content": "Server" }`
 Narration: "First, the backend component handles incoming traffic..."
 → No word overlap — reveal falls back to positional matching (less precise).
 
-**Note:** Substring matching works — "failure" matches "fail", "servers" matches "server". ElevenLabs uses word-level cues; OpenAI and local (Sherpa) keep scene-level timing but still benefit from the same keyword overlap and `spoken_forms` aliases.
+**Note:** Object-content checks still accept useful semantic overlap — "failure" can match "fail", and "servers" can match "server". Explicit animation `cue` phrases are stricter: Kaivra case-folds text, removes punctuation, and matches the complete phrase as contiguous spoken words across either native phrase cues or deterministic estimated word cues. Pair every cue with `at` so silent previews retain their authored timing.
 
 ## Continuity
 
-- Prefer persistent document-level state first, then continuity morphs for scene-local objects that evolve from beat to beat.
+- Prefer persistent story actors and changing values, then continuity morphs for local objects that truly evolve.
 - Reuse the same `id` and `content` across consecutive scenes when a value carries forward. The engine morphs it into its new position automatically.
+- Use `actor_id` when the same visual actor should carry across scenes even if local object IDs change by slot or region.
+- Use `continuity_mode: "evolving"` for moderate copy changes on the same actor, or `continuity_mode: "position_only"` for abstract dense actors where motion matters more than text identity.
 - When a data structure spans scenes (array, graph, pipeline), keep the same object IDs. Recreating with new IDs each scene kills the smooth morph.
 - When a concept repeats the same operation, show one concrete worked example, then generalize.
 
 ## Common Mistakes
 
 - Reusing the same `id` for a different label in the next scene. Keep the content close if you want a morph; otherwise rename the object.
+- Forgetting to add `actor_id` when the same actor moves between different slots in a storyboard.
 - Leaving top-level objects flat under the default center layout. Wrap rows and columns in `group` containers with `flow` or `stack`.
 - Drawing connectors across unrelated nodes. Keep connected objects adjacent in their group so straight-line connectors stay legible.
 - Forgetting `spoken_forms` on names the TTS or aligner may hear differently.
@@ -196,22 +370,69 @@ Narration: "First, the backend component handles incoming traffic..."
 
 ## Workflow
 
-1. `plan_animation` → gather topic, audience, theme, structure, and voice mode when those preferences are still missing. If the prompt is already specific enough, assume the draft defaults and start writing.
-2. Write the JSON directly, and Rewrite any generic starter ideas into topic-specific scenes, objects, and animations before shipping.
-3. `check_animation` → `preview_animation` → `render_animation`.
+1. Transform the learning goal into a reviewed story contract.
+2. Define the persistent visual cast, then assign one motion verb and visible
+   state change to every beat.
+3. Inventory the available capabilities against that choreography. If a
+   necessary reusable primitive is absent, submit `kaivra://capability-escalation`.
+4. Build and review an animatic; do not treat creative approval as proof that
+   the requested primitive is implemented.
+5. The host/root orchestrator delegates each approved primitive to a bounded,
+   lower-cost implementation agent with acceptance tests, integrates the
+   result personally, and resumes JSON only after implementation or an
+   explicitly accepted fallback and product risk.
+6. Write topic-specific JSON with `meta.story_contract: "<slug>.story.md"`,
+   then `check_animation` → `preview_animation` → `render_animation`.
+"""
+
+
+def _capability_escalation_resource() -> str:
+    return """# Creative Capability Escalation
+
+Use this when the creative director can say: “This visualization best teaches
+the idea, but the reusable component does not exist yet; I approve the story
+and request the component.” This is a product request, not JSON to improvise.
+
+## Story-contract format
+
+```markdown
+## Creative capability requests
+
+| ID | Desired visualization | Story need | Missing reusable capability | Rejected/acceptable fallback | Authorization | Implementation status |
+| --- | --- | --- | --- | --- | --- | --- |
+| CAP-01 | The learner-visible action and persistent actor | The belief or causal relationship this makes understandable | The smallest reusable DSL/renderer primitive, not a one-off scene | What an existing workaround would hide, weaken, or explicitly accept | authorized | pending |
+```
+
+If the capability inventory finds no gap, write exactly `No missing
+capabilities.` instead of the table. Allowed implementation statuses are
+`pending`, `implemented`, and `fallback accepted`. A pending request may remain
+creatively approved, but it is not ready for dependent JSON authoring.
+
+## Handoff rule
+
+Creative approval means the story is approved. It does **not** mean the
+primitive exists or that JSON authoring may proceed. The host/root orchestrator
+turns every approved primitive into a bounded task for a lower-cost
+implementation agent, provides acceptance tests, personally integrates and
+verifies the result, then resumes JSON authoring. JSON may resume earlier only
+when the creative director explicitly accepts a fallback and its product risk.
+
+Keep the escalation attached to the story contract and capability inventory so
+the animatic records whether it uses the implemented primitive or the accepted
+fallback.
 """
 
 
 def _pattern_catalog() -> str:
     return """# Starter Pattern Catalog
 
-## `process_explainer`
+## `motion_explainer`
 
-Default for narrated explainers. Use a process-first story arc: why it matters → state enters the system → step-by-step flow → outcome. Prefer user-facing concepts over internal component inventories.
+Default for narrated explainers. Establish the subject once, then let its actors move, combine, split, transform, and hand state forward through one continuous visual world.
 
-## `visual_explainer`
+## `system_storyboard`
 
-Use when the core idea is a concept diagram rather than a process. Still lead with why it matters, but let one strong visual carry most of the explanation.
+Legacy/intentionally operational format for dense dashboards, support lanes, and many simultaneous actors. It is not a default explainer composition.
 
 ## `algorithm_walkthrough`
 
@@ -225,12 +446,20 @@ Systems or pipeline explanation with visible stages and connections. Use this on
 
 Contrasting states, revisions, or outcomes.
 
-These patterns are authoring patterns, not generated scaffolds. Write scene objects directly, keep beats short, and make each scene structurally specific to the topic.
+Patterns are behavioral starting points, not visual scaffolds. The subject's causal choreography determines the composition.
 """
 
 
 def _theme_catalog() -> str:
     return """# Theme Catalog
+
+Themes supply palette, typography, and primitive styling. They do not supply a composition, card grammar, scene rhythm, or motion language.
+
+## `editorial`
+
+- Flat warm palette and direct typography
+- Flat warm canvas, direct typography, large metric roles, crisp circles and connectors, no shadows
+- Pair `draw` with `flow` for directional motion
 
 ## `material`
 
@@ -239,8 +468,13 @@ def _theme_catalog() -> str:
 
 ## `modern`
 
-- Best default for polished demos and explainers
-- Soft depth, UI-like cards, cleaner presentation
+- Card-based product presentation style
+- Soft depth and UI-like surfaces; use only when the subject benefits from visible containers
+
+## `storyboard_dark`
+
+- Best for dense operational storyboards and high-contrast engineering explainers
+- Dark canvas, compact actor treatment, and stronger state-color separation
 
 ## `whiteboard`
 
@@ -249,7 +483,8 @@ def _theme_catalog() -> str:
 
 Recommendation:
 
-- Default to `modern`
+- Pick a theme after the story contract and choreography map exist
+- Reach for `storyboard_dark` only when the subject genuinely needs a dense operational field
 - Reach for `material` when the user wants a product-UI feel or asks for a theme example to customize
 - Switch to `whiteboard` only when the user explicitly wants a sketch or classroom feel
 - Use `add_theme` when the user wants a reusable custom palette or card treatment
@@ -259,135 +494,29 @@ Recommendation:
 def _example_catalog() -> str:
     return """# Example Catalog
 
-Use these as shape references, not templates. Borrow the composition, then rewrite content, IDs, and relationships for the user's concept.
+These files demonstrate syntax and renderer capabilities only. Do not borrow their composition, scene boundaries, card grammar, navigation, or motion language. Derive those from the current subject and its choreography map.
 
 ## Full Reference Examples
 
-Read these complete, polished animations before authoring your own JSON. They demonstrate supported v1.2 patterns working together:
+Read a reference only when you need a concrete DSL syntax example:
 
-- **`examples/reference/perspectiv_medcase_process_explainer.json`** — 6-scene narrated process explainer (How Perspectiv MedCase Works). Shows a persistent carousel chapter tracker, one-column framing, state-flow visuals, persistent objects, continuity, staged connector draws, and user-facing narration. Use this as the primary quality bar for narrated system/process explainers.
-- **`examples/reference/api_how_it_works.json`** — 4-scene narrated explainer (How an API Works). Shows carousel chapter tracker, horizontal flow layouts, connector draws, continuity morphs across scenes, and conversational narration. Material theme, educational pacing.
-- **`examples/reference/forward_propagation.json`** — 6-scene narrated explainer (Forward Propagation in a Neural Network). Shows worked-example arithmetic, stacked layouts, highlight colors (accent/success/warning), and deep continuity where computed values carry across scenes. Material theme, educational pacing.
-- **`examples/demos/semantic_one_column_regions.json`** — Compact one-scene demo of the semantic `one-column` regions: `problem_solution`, `request_pipeline`, `fan_out`, `system_architecture`, and `timeline_steps`.
+- **`examples/reference/forward_propagation.json`** — Story-contract, cue timing, meter, replace, draw, and flow syntax.
+- **`examples/reference/perspectiv_medcase_process_explainer.json`** — Carousel and persistent-state syntax for legacy or intentionally dashboard-like work.
+- **`examples/reference/system_storyboard_demo.json`** — Dense-grid and actor-identity syntax.
+- **`examples/reference/api_how_it_works.json`** — Connector and continuity syntax.
+- **`examples/demos/semantic_one_column_regions.json`** — Legacy document-region syntax; do not use it as a narrated-explainer composition model.
 
-Read one of these files before authoring a new animation — they are the quality bar.
+The current story contract and choreography map—not any repository example—are the quality bar.
 
-If your MCP client shows only resource descriptors at first, call `resources/read` on `kaivra://example/perspectiv_medcase_process_explainer`, `kaivra://example/api_how_it_works`, or `kaivra://example/forward_propagation` to fetch the actual JSON example body.
+## Blocked composition grammar
 
-## BAD: Generic repeated scene (do NOT ship this)
+Reject a narrated draft when each beat resets into the same heading, stage
+label, row of cards, and footer tracker. Also reject animations whose primary
+action is staggered fades, pulse, glow, or a new static diagram per beat. Do not
+include those structures as copyable JSON examples, even when labeling them as
+bad; author from the choreography map instead.
 
-Every scene looks the same — generic "Signal In → Active Idea → Result" lane with only labels changed. This kind of repeated structure needs to be rewritten into topic-specific scenes.
-
-```json
-{
-  "template": "one-column",
-  "objects": [
-    { "type": "text", "id": "visual_heading", "content": "Plants add water vapor", "style": "heading" },
-    { "type": "group", "id": "visual_panel", "children": [
-      { "type": "token", "id": "visual_stage_badge", "content": "Beat 2" },
-      { "type": "group", "id": "visual_lane", "layout": { "type": "flow" }, "children": [
-        { "type": "token", "id": "visual_source_token", "content": "Evaporation" },
-        { "type": "box", "id": "visual_focus_card", "content": "Transpiration" },
-        { "type": "token", "id": "visual_result_token", "content": "Condensation" }
-      ]}
-    ]},
-    { "type": "connector", "from": "visual_source_token", "to": "visual_focus_card" },
-    { "type": "connector", "from": "visual_focus_card", "to": "visual_result_token" }
-  ]
-}
-```
-
-Problem: generic lane, no real content, same structure as every other scene.
-
-## GOOD: Rewritten scene with topic-specific content
-
-Each scene has its own unique diagram built from the actual content being explained.
-
-```json
-{
-  "template": "one-column",
-  "auto_visible": false,
-  "narration": "Now let's slow down and look at why this weighted sum exists. Each weight tells the neuron how strongly to listen to one input.",
-  "objects": [
-    { "type": "text", "id": "hidden_sum_title", "content": "1. Compute One Hidden Weighted Sum", "style": "heading" },
-    {
-      "type": "group", "id": "term_row",
-      "layout": { "type": "flow", "gap": "large", "direction": "horizontal" },
-      "children": [
-        { "type": "box", "id": "term_1", "content": "0.70 × 0.50 = 0.35" },
-        { "type": "box", "id": "term_2", "content": "−0.40 × −0.30 = 0.12" }
-      ]
-    },
-    { "type": "box", "id": "partial_sum", "content": "0.35 + 0.12 = 0.47" },
-    {
-      "type": "group", "id": "weight_note_row",
-      "layout": { "type": "flow", "gap": "medium" },
-      "children": [
-        { "type": "token", "id": "term_1_label", "content": "x1 contributes evidence to h1" },
-        { "type": "token", "id": "term_2_label", "content": "x2 contributes evidence to h1" }
-      ]
-    },
-    { "type": "connector", "id": "term_1_to_sum", "from": "term_1", "to": "partial_sum" },
-    { "type": "connector", "id": "term_2_to_sum", "from": "term_2", "to": "partial_sum" }
-  ],
-  "animations": [
-    { "action": "fade-in", "target": "hidden_sum_title", "at": "0s", "duration": "0.8s" },
-    { "action": "fade-in", "target": "term_1", "at": "0.8s", "duration": "0.9s" },
-    { "action": "fade-in", "target": "term_2", "at": "1.5s", "duration": "0.9s" },
-    { "action": "draw", "target": "term_1_to_sum", "at": "2.5s", "duration": "1.0s" },
-    { "action": "draw", "target": "term_2_to_sum", "at": "3.0s", "duration": "1.0s" },
-    { "action": "fade-in", "target": "partial_sum", "at": "3.2s", "duration": "0.8s" },
-    { "action": "highlight", "target": "partial_sum", "at": "4.0s", "duration": "2.0s", "color": "accent" },
-    { "action": "fade-in", "target": "weight_note_row", "at": "5.5s", "duration": "0.8s" }
-  ]
-}
-```
-
-Notice: unique objects showing actual computations, connectors between real elements, staggered reveals matching narration, no generic repeated lane.
-
-## GOOD: Non-technical scene (Water Cycle example)
-
-Even non-math topics should have unique per-scene diagrams, not repeated lanes.
-
-```json
-{
-  "template": "one-column",
-  "auto_visible": false,
-  "narration": "Higher up, the air is cooler, so the vapor loses heat and condenses into tiny droplets that gather into clouds.",
-  "objects": [
-    { "type": "text", "id": "condensation_title", "content": "3. Condensation", "style": "heading" },
-    {
-      "type": "group", "id": "altitude_stack",
-      "layout": { "type": "stack", "gap": "large" },
-      "children": [
-        { "type": "box", "id": "warm_vapor", "content": "Warm vapor rises", "style": "muted" },
-        { "type": "box", "id": "cooling_zone", "content": "Air cools at altitude", "style": "accent" },
-        { "type": "box", "id": "droplets", "content": "Tiny water droplets form", "style": "primary" }
-      ]
-    },
-    { "type": "token", "id": "temp_label", "content": "Temperature drops → vapor condenses" },
-    { "type": "box", "id": "cloud_result", "content": "Clouds form" },
-    { "type": "connector", "id": "vapor_to_cool", "from": "warm_vapor", "to": "cooling_zone" },
-    { "type": "connector", "id": "cool_to_drops", "from": "cooling_zone", "to": "droplets" },
-    { "type": "connector", "id": "drops_to_cloud", "from": "droplets", "to": "cloud_result" }
-  ],
-  "animations": [
-    { "action": "fade-in", "target": "condensation_title", "at": "0s", "duration": "0.8s" },
-    { "action": "fade-in", "target": "warm_vapor", "at": "0.5s", "duration": "0.8s" },
-    { "action": "draw", "target": "vapor_to_cool", "at": "1.2s", "duration": "1.0s" },
-    { "action": "fade-in", "target": "cooling_zone", "at": "1.5s", "duration": "0.8s" },
-    { "action": "highlight", "target": "cooling_zone", "at": "2.5s", "duration": "1.5s", "color": "accent" },
-    { "action": "draw", "target": "cool_to_drops", "at": "3.5s", "duration": "1.0s" },
-    { "action": "fade-in", "target": "droplets", "at": "4.0s", "duration": "0.8s" },
-    { "action": "fade-in", "target": "temp_label", "at": "5.0s", "duration": "0.8s" },
-    { "action": "draw", "target": "drops_to_cloud", "at": "6.0s", "duration": "1.0s" },
-    { "action": "fade-in", "target": "cloud_result", "at": "6.5s", "duration": "0.8s" },
-    { "action": "highlight", "target": "cloud_result", "at": "7.5s", "duration": "2.0s", "color": "success" }
-  ]
-}
-```
-
-## Continuity Carry-Over
+## Actor Continuity
 
 Reuse the same `id` and `content` in consecutive scenes — the engine glides the object to its new position.
 
@@ -406,79 +535,37 @@ Reuse the same `id` and `content` in consecutive scenes — the engine glides th
 }
 ```
 
-## Complete Multi-Scene Explainer Structure
+## Continuous Motion Fragment
 
-Shows document-level carousel, continuity carry-over, fade-in reveals, and connector draws composed together.
+This fragment demonstrates causal motion without prescribing a page composition. One actor remains on screen while a path draws, a signal travels, and the actor's state changes.
 
 ```json
 {
-  "version": "1.3",
-  "meta": {
-    "title": "Example Explainer",
-    "resolution": [1920, 1080], "fps": 30, "theme": "modern",
-    "pacing": "educational", "continuity": true, "continuity_duration": "1.2s"
-  },
-  "objects": [
-    {
-      "type": "group", "id": "chapters", "position": "bottom",
-      "children": [
-        { "type": "token", "id": "step_compute", "content": "1  Compute" },
-        { "type": "token", "id": "step_activate", "content": "2  Activate" }
-      ],
-      "layout": { "type": "carousel", "gap": "medium", "direction": "horizontal",
-                   "align": "center", "curve": 16.0, "active_scale": 1.16, "inactive_scale": 0.92 }
-    }
-  ],
+  "version": "1.5",
+  "meta": {"title": "A Tiny Probability", "theme": "editorial", "video_bookends": false},
   "scenes": [
     {
-      "id": "compute", "duration": "18s", "template": "one-column", "auto_visible": false,
-      "include_persistent_objects": true,
-      "narration": "Each weight scales one input. We multiply, then add everything together.",
+      "id": "continuous_motion", "duration": "8s", "auto_visible": false,
+      "narration": "This clue travels into the model, changes its running evidence, and nudges the prediction toward dog.",
       "objects": [
-        { "type": "text", "id": "compute_title", "content": "1. Weighted Sum", "style": "heading" },
-        { "type": "box", "id": "term_a", "content": "0.70 × 0.50 = 0.35" },
-        { "type": "box", "id": "result_val", "content": "sum = 0.47" },
-        { "type": "connector", "id": "a_to_sum", "from": "term_a", "to": "result_val" }
+        {"type": "circle", "id": "clue", "content": "floppy ears", "style": "coral", "size_variant": "large"},
+        {"type": "circle", "id": "evidence", "content": "evidence", "style": "cyan", "size_variant": "hero"},
+        {"type": "text", "id": "prediction", "content": "more likely dog", "style": "metric-gold"},
+        {"type": "connector", "id": "path", "from": "clue", "to": "evidence", "style": "coral"}
       ],
       "animations": [
-        { "action": "fade-in", "target": "compute_title", "at": "0s", "duration": "0.8s" },
-        { "action": "fade-in", "target": "term_a", "at": "0.8s", "duration": "0.8s" },
-        { "action": "draw", "target": "a_to_sum", "at": "2s", "duration": "1s" },
-        { "action": "fade-in", "target": "result_val", "at": "2.5s", "duration": "0.8s" },
-        { "action": "highlight", "target": "result_val", "at": "3.5s", "duration": "2s", "color": "success" },
-        { "action": "highlight", "target": "step_compute", "at": "0s", "duration": "16s", "style": "glow", "color": "accent" },
-        { "action": "scale", "target": "step_compute", "at": "0.1s", "duration": "0.8s", "scale_factor": 1.12 }
-      ]
-    },
-    {
-      "id": "activate", "duration": "18s", "template": "one-column", "auto_visible": false,
-      "include_persistent_objects": true,
-      "narration": "Now we feed that sum through ReLU. Positive values survive, negatives get clipped to zero.",
-      "objects": [
-        { "type": "text", "id": "activate_title", "content": "2. Apply ReLU", "style": "heading" },
-        { "type": "box", "id": "result_val", "content": "sum = 0.47" },
-        { "type": "box", "id": "relu_out", "content": "ReLU(0.47) = 0.47" },
-        { "type": "connector", "id": "sum_to_relu", "from": "result_val", "to": "relu_out" }
-      ],
-      "animations": [
-        { "action": "fade-in", "target": "activate_title", "at": "0s", "duration": "0.8s" },
-        { "action": "draw", "target": "sum_to_relu", "at": "2s", "duration": "1s" },
-        { "action": "fade-in", "target": "relu_out", "at": "2.5s", "duration": "0.8s" },
-        { "action": "highlight", "target": "relu_out", "at": "3.5s", "duration": "2s", "color": "success" },
-        { "action": "highlight", "target": "step_activate", "at": "0s", "duration": "16s", "style": "glow", "color": "accent" },
-        { "action": "scale", "target": "step_activate", "at": "0.1s", "duration": "0.8s", "scale_factor": 1.12 }
+        {"action": "appear", "target": ["clue", "evidence"], "at": "0s"},
+        {"id": "draw_path", "action": "draw", "target": "path", "at": "2s", "duration": "0.8s"},
+        {"action": "flow", "target": "path", "after": "draw_path", "duration": "1s"},
+        {"action": "replace", "target": "evidence", "content": "evidence rises", "at": "4s", "duration": "0.8s"},
+        {"action": "appear", "target": "prediction", "at": "5.2s"}
       ]
     }
   ]
 }
 ```
 
-Key patterns in this example:
-- **Carousel**: document-level group with `layout.type: "carousel"` — each scene highlights its step
-- **Persistent state**: the chapter rail lives at document scope and stays stable across scenes
-- **Continuity**: `result_val` has the same id and content in both scenes — the engine morphs it smoothly
-- **fade-in** for all reveals, **draw** for connectors — no bare `appear`
-- **template: "one-column"** and **auto_visible: false** on every scene
+The important relationship is `draw` → `flow` → persistent state change. The example intentionally does not define a reusable heading, card, or footer composition.
 """
 
 

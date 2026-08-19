@@ -23,10 +23,18 @@ class ObjectType(str, Enum):
     TEXT = "text"
     BOX = "box"
     CIRCLE = "circle"
+    LINEAR_METER = "linear_meter"
+    SIGMOID_PLOT = "sigmoid_plot"
+    PET_PORTRAIT = "pet_portrait"
+    # Short authoring alias for ``pet_portrait``. Both values intentionally
+    # render through the same primitive so a document remains explicit when it
+    # is serialized again.
+    PET = "pet"
     GROUP = "group"
     CONNECTOR = "connector"
     TOKEN = "token"
     CALLOUT = "callout"
+    SEMANTIC_ICON = "semantic_icon"
 
 
 class LayoutType(str, Enum):
@@ -49,8 +57,10 @@ class AnimAction(str, Enum):
     MOVE_TO = "move-to"
     SWAP = "swap"
     SCALE = "scale"
+    METER_TO = "meter-to"
     # Drawing
     DRAW = "draw"
+    FLOW = "flow"
     TYPE = "type"
     REVEAL = "reveal"
     REVEAL_CHILDREN = "reveal-children"
@@ -87,10 +97,50 @@ class PacingPreset(str, Enum):
     EDUCATIONAL = "educational"
 
 
+class ContinuityMode(str, Enum):
+    STRICT = "strict"
+    EVOLVING = "evolving"
+    POSITION_ONLY = "position_only"
+
+
+class SizeVariant(str, Enum):
+    COMPACT = "compact"
+    DEFAULT = "default"
+    HERO = "hero"
+
+
 class AudienceLevel(str, Enum):
     LAYPERSON = "layperson"
     MIXED = "mixed"
     TECHNICAL = "technical"
+
+
+class PetKind(str, Enum):
+    """The familiar animal cues used by a native pet portrait."""
+
+    MYSTERY = "mystery"
+    DOG = "dog"
+    CAT = "cat"
+
+
+class PetFeature(str, Enum):
+    """The explainable visual cues a pet portrait can call out."""
+
+    EARS = "ears"
+    SNOUT = "snout"
+
+
+class SemanticIconName(str, Enum):
+    """Small deterministic illustrations for story-first explainer diagrams."""
+
+    FUND = "fund"
+    STOREFRONT = "storefront"
+    WAREHOUSE = "warehouse"
+    CASH = "cash"
+    SHARES = "shares"
+    BORROW = "borrow"
+    LOAN = "loan"
+    HANDSHAKE = "handshake"
 
 
 class RelativeBasis(str, Enum):
@@ -284,7 +334,10 @@ class ObjectSpec(BaseModel):
     """Specification for any visual object in a scene."""
 
     type: ObjectType = Field(
-        description="Object type: text, box, circle, group, connector, token, callout"
+        description=(
+            "Object type: text, box, circle, linear_meter, sigmoid_plot, pet_portrait "
+            "(or pet), semantic_icon, group, connector, token, or callout"
+        )
     )
     id: str | None = Field(
         None, description="Unique identifier for this object (auto-generated if omitted)"
@@ -299,7 +352,11 @@ class ObjectSpec(BaseModel):
     )
     style: str | None = Field(
         None,
-        description="Visual style preset: 'heading', 'section-heading', 'body', 'caption', 'code'",
+        description=(
+            "Visual style preset. Typography roles include 'hero-heading', 'heading', "
+            "'section-heading', 'body', 'metric', 'operator', and 'annotation'; semantic color "
+            "variants can be applied to metrics and connectors."
+        ),
     )
     position: Literal["top", "bottom", "left", "right", "above-layout"] | None = Field(
         None, description="Pin object to a canvas edge instead of participating in layout"
@@ -310,12 +367,38 @@ class ObjectSpec(BaseModel):
     label: str | None = Field(
         None, description="Small label displayed on the object (e.g. badge text)"
     )
+    actor_id: str | None = Field(
+        None,
+        description=(
+            "Stable actor identity used for continuity across scenes. "
+            "When omitted, continuity falls back to the object's id."
+        ),
+    )
+    continuity_mode: ContinuityMode = Field(
+        ContinuityMode.STRICT,
+        description=(
+            "Continuity matching policy. `strict` preserves current behavior, "
+            "`evolving` allows moderate content evolution, and "
+            "`position_only` keeps motion continuity for abstract actors."
+        ),
+    )
+    size_variant: SizeVariant = Field(
+        SizeVariant.DEFAULT,
+        description="Visual size preset: compact, default, or hero.",
+    )
     visible: bool | None = Field(
         None, description="Default visibility for this object (overrides scene auto_visible)"
     )
     scale_text: bool | None = Field(
         None,
         description="Whether content text should scale with the object transform. Defaults to false for boxes/tokens and true otherwise.",
+    )
+    align_equals: bool = Field(
+        False,
+        description=(
+            "Whether equation-like text should align its equals sign with sibling objects. "
+            "Defaults to false so alignment is opt-in."
+        ),
     )
     # Motion presets
     enter: "MotionSpec | None" = Field(None, description="Enter animation preset for this object")
@@ -344,12 +427,121 @@ class ObjectSpec(BaseModel):
         None, description="Numeric token ID displayed as a badge (for tokens)"
     )
 
+    # Pet portrait
+    pet_kind: PetKind = Field(
+        PetKind.MYSTERY,
+        description=(
+            "Friendly pet portrait variant for type='pet_portrait' or type='pet': "
+            "'dog', 'cat', or 'mystery'. The mystery variant deliberately combines "
+            "dog and cat cues for a dog-or-cat question."
+        ),
+    )
+    pet_highlights: list[PetFeature] = Field(
+        default_factory=list,
+        description=(
+            "Visible semantic cues to outline on a pet portrait. Supported values are 'ears' "
+            "and 'snout'. Ears use the explanatory coral channel; snout uses cyan."
+        ),
+    )
+    show_feature_labels: bool = Field(
+        False,
+        description=(
+            "Whether a pet portrait should render its selected feature labels with short leader "
+            "lines. The layout reserves annotation gutters when true."
+        ),
+    )
+
+    # Semantic icon
+    icon_name: SemanticIconName | None = Field(
+        None,
+        description=(
+            "Named flat illustration for type='semantic_icon'. Supported values are "
+            "'fund', 'storefront', 'warehouse', 'cash', 'shares', 'borrow', 'loan', "
+            "and 'handshake'. Use content only as a short human-readable caption."
+        ),
+    )
+
+    # Linear meter
+    meter_value: float = Field(
+        0.0,
+        description=(
+            "Current numeric value for type='linear_meter'. The rendered fill and pointer are "
+            "bounded to meter_min through meter_max."
+        ),
+    )
+    meter_min: float = Field(
+        0.0,
+        description="Inclusive low end for type='linear_meter'. Must be smaller than meter_max.",
+    )
+    meter_max: float = Field(
+        100.0,
+        description="Inclusive high end for type='linear_meter'. Must be larger than meter_min.",
+    )
+    meter_left_label: str | None = Field(
+        None,
+        description="Optional label anchored to the low end of a linear meter.",
+    )
+    meter_center_label: str | None = Field(
+        None,
+        description="Optional label anchored to the midpoint of a linear meter.",
+    )
+    meter_right_label: str | None = Field(
+        None,
+        description="Optional label anchored to the high end of a linear meter.",
+    )
+    meter_value_label: str | None = Field(
+        None,
+        description="Optional readable label attached to a linear meter's current pointer.",
+    )
+    meter_caption: str | None = Field(
+        None,
+        description="Optional concise explanatory caption above a linear meter.",
+    )
+
+    # Sigmoid plot
+    sigmoid_input: float = Field(
+        0.0,
+        description=(
+            "Input score highlighted on type='sigmoid_plot'. The renderer derives the "
+            "corresponding probability with the logistic sigmoid."
+        ),
+    )
+    sigmoid_input_label: str | None = Field(
+        None,
+        description="Optional readable label below the highlighted sigmoid input.",
+    )
+    sigmoid_output_label: str | None = Field(
+        None,
+        description="Optional readable probability label beside the highlighted sigmoid output.",
+    )
+    sigmoid_caption: str | None = Field(
+        "SIGMOID",
+        description="Optional concise title above a sigmoid plot.",
+    )
+
     # Callout
     callout_side: Literal["left", "right", "top", "bottom"] | None = Field(
         None, description="Which side of the target to place the callout"
     )
 
     model_config = {"populate_by_name": True, "extra": "allow"}
+
+    @model_validator(mode="after")
+    def validate_linear_meter_bounds(self) -> "ObjectSpec":
+        """Keep every meter's scale intelligible before it reaches a renderer."""
+        if self.type == ObjectType.LINEAR_METER and self.meter_max <= self.meter_min:
+            raise ValueError("linear_meter requires meter_max to be greater than meter_min")
+        if self.type not in {ObjectType.PET_PORTRAIT, ObjectType.PET} and (
+            self.pet_highlights or self.show_feature_labels
+        ):
+            raise ValueError(
+                "pet_highlights and show_feature_labels require type='pet_portrait' or 'pet'"
+            )
+        if self.type == ObjectType.SEMANTIC_ICON and self.icon_name is None:
+            raise ValueError("semantic_icon requires icon_name")
+        if self.type != ObjectType.SEMANTIC_ICON and self.icon_name is not None:
+            raise ValueError("icon_name requires type='semantic_icon'")
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -379,7 +571,7 @@ class AnimSpec(BaseModel):
         description="Optional animation identifier used by semantic timing anchors.",
     )
     action: AnimAction = Field(
-        description="Animation type: appear, disappear, fade-in, fade-out, move, move-to, swap, scale, draw, type, reveal, reveal-children, highlight, pulse, build, replace"
+        description="Animation type: appear, disappear, fade-in, fade-out, move, move-to, swap, scale, meter-to, draw, flow, type, reveal, reveal-children, highlight, pulse, build, replace"
     )
     target: str | list[str] | None = Field(
         None,
@@ -433,6 +625,13 @@ class AnimSpec(BaseModel):
     )
     from_scale: float | None = Field(
         None, description="Starting scale for scale action (defaults to 1.0)"
+    )
+    meter_value: float | None = Field(
+        None,
+        description=(
+            "Target numeric value for a meter-to action. The value changes continuously from "
+            "the meter's current value and is visually bounded to its declared meter range."
+        ),
     )
     style: Literal["glow", "outline", "fade-in", "appear"] | None = Field(
         None,
@@ -497,11 +696,20 @@ class AnimSpec(BaseModel):
             )
             if value
         ]
-        if len(selectors) > 1:
+        if len(selectors) > 1 and set(selectors) != {"at", "cue"}:
             raise ValueError(
-                f"Animation {self.id or self.action.value!r} uses multiple timing anchors {selectors}; choose one."
+                f"Animation {self.id or self.action.value!r} uses multiple timing anchors "
+                f"{selectors}; only `at` + `cue` may be combined so `at` can provide a "
+                "silent-render fallback."
             )
-        if self.action == AnimAction.REVEAL:
+        if self.meter_value is not None and self.action != AnimAction.METER_TO:
+            raise ValueError("`meter_value` is only supported for meter-to animations.")
+        if self.action == AnimAction.METER_TO:
+            if not isinstance(self.target, str) or not self.target.strip():
+                raise ValueError("Meter-to animations require one linear_meter target ID.")
+            if self.meter_value is None:
+                raise ValueError("Meter-to animations require a numeric `meter_value` target.")
+        elif self.action == AnimAction.REVEAL:
             if self.target is None:
                 raise ValueError("Reveal animations require `target` or `targets`.")
             if self.style is not None and self.style not in {"fade-in", "appear"}:
@@ -583,10 +791,10 @@ class SceneSpec(BaseModel):
     template: str | None = Field(
         None,
         description=(
-            "Layout template: 'two-column' or 'one-column'. "
-            "'one-column' provides a header, backward-compatible 'main', and semantic "
-            "regions such as 'problem_solution', 'request_pipeline', 'fan_out', "
-            "'system_architecture', and 'timeline_steps'."
+            "Optional legacy/document-layout template: 'editorial', 'two-column', "
+            "'one-column', or 'storyboard'. Do not use a template as the starting point "
+            "for a narrated explainer; derive explicit scene and group layouts from the "
+            "subject's causal choreography."
         ),
     )
     narration: str | None = Field(
@@ -611,7 +819,11 @@ class SceneSpec(BaseModel):
         True, description="Whether document-level persistent objects should appear in this scene"
     )
     show_progress_bar: bool = Field(
-        True, description="Whether to render the bottom progress bar for this scene"
+        False,
+        description=(
+            "Whether to render bottom navigation progress. Disabled by default because "
+            "presentation chrome should not occupy narrated explainer frames."
+        ),
     )
     transition: TransitionSpec | None = Field(None, description="Transition to next scene")
 
@@ -636,14 +848,25 @@ class MetaSpec(BaseModel):
         (1920, 1080), description="Canvas resolution [width, height]"
     )
     fps: int = Field(30, description="Frames per second")
-    theme: str = Field("whiteboard", description="Visual theme name")
+    theme: str = Field("editorial", description="Visual theme name")
     audience: AudienceLevel | None = Field(
         None,
         description="Target audience level: layperson, mixed, or technical.",
     )
+    story_contract: str | None = Field(
+        None,
+        description=(
+            "Relative path to the reviewed Markdown story contract for this animation, "
+            "typically '<slug>.story.md' beside the JSON file. It guides authoring and "
+            "does not affect rendering."
+        ),
+    )
     show_subtitles: bool = Field(
-        True,
-        description="Whether to render scene narration as on-screen subtitles",
+        False,
+        description=(
+            "Whether to render scene narration as on-screen subtitles. Disabled by default "
+            "so narration does not become duplicated screen copy."
+        ),
         validation_alias=AliasChoices("show_subtitles", "show_narration"),
         serialization_alias="show_subtitles",
     )
@@ -659,7 +882,7 @@ class MetaSpec(BaseModel):
         description="Minimum tail time at scene end after highlight/pulse effects",
     )
     video_bookends: bool = Field(
-        True,
+        False,
         description="Whether rendered videos should include intro and outro bookend scenes.",
     )
 
@@ -692,6 +915,233 @@ class DocumentSpec(BaseModel):
     version: str = Field(CURRENT_DSL_VERSION, description="Schema version")
     meta: MetaSpec = Field(default_factory=MetaSpec, description="Animation metadata")
     objects: list[ObjectSpec] = Field(
-        default_factory=list, description="Persistent objects visible in every scene"
+        default_factory=list,
+        description=(
+            "Persistent story actors or values visible across scenes. Do not use this for "
+            "automatic headings, legends, chapter rails, or navigation chrome."
+        ),
     )
     scenes: list[SceneSpec] = Field(default_factory=list, description="Ordered list of scenes")
+
+    # The exported schema describes the current v1.5 authoring contract. Legacy
+    # top-level permissiveness remains a runtime compatibility path below.
+    model_config = {"json_schema_extra": {"additionalProperties": False}}
+
+    @model_validator(mode="before")
+    @classmethod
+    def apply_versioned_defaults_and_validate_top_level(cls, value: Any) -> Any:
+        """Preserve legacy rendering defaults while making editorial the v1.5 contract.
+
+        The schema's field defaults describe the current document format.  Older documents
+        need their defaults materialized before ``MetaSpec`` validates, otherwise a missing
+        field would silently adopt the new rendering behavior.
+        """
+        if not isinstance(value, dict):
+            return value
+
+        raw = dict(value)
+        version = raw.get("version")
+        legacy = _is_legacy_document_version(version)
+
+        if not legacy:
+            unknown_fields = sorted(set(raw) - _DOCUMENT_TOP_LEVEL_FIELDS)
+            if unknown_fields:
+                unknown = ", ".join(f"`{field}`" for field in unknown_fields)
+                misplaced_metadata = [
+                    field for field in unknown_fields if field in _MISPLACED_META_FIELDS
+                ]
+                hint = ""
+                if misplaced_metadata:
+                    fields = ", ".join(f"`{field}`" for field in misplaced_metadata)
+                    hint = f" Move {fields} under `meta`."
+                requested_version = version if version is not None else "1.5"
+                raise ValueError(
+                    f"DSL {requested_version!r} does not allow unknown top-level fields: "
+                    f"{unknown}. Allowed fields are `version`, `meta`, `objects`, and `scenes`."
+                    f"{hint}"
+                )
+
+        meta = raw.get("meta")
+        if isinstance(meta, MetaSpec):
+            # ``exclude_unset`` retains only fields an API caller explicitly selected, so
+            # legacy compatibility defaults can still be applied below.
+            meta = meta.model_dump(by_alias=True, exclude_unset=True)
+
+        if meta is None and "meta" not in raw:
+            meta = {}
+        if isinstance(meta, dict):
+            resolved_meta = dict(meta)
+            if legacy:
+                resolved_meta.setdefault("theme", "whiteboard")
+                resolved_meta.setdefault("video_bookends", True)
+                if "show_subtitles" not in resolved_meta and "show_narration" not in resolved_meta:
+                    resolved_meta["show_subtitles"] = True
+            raw["meta"] = resolved_meta
+
+        if legacy and isinstance(raw.get("scenes"), list):
+            raw["scenes"] = [
+                {**scene, "show_progress_bar": scene.get("show_progress_bar", True)}
+                if isinstance(scene, dict)
+                else scene
+                for scene in raw["scenes"]
+            ]
+
+        return raw
+
+    @model_validator(mode="after")
+    def validate_animation_targets(self) -> "DocumentSpec":
+        """Ensure flow animations have a rendered connector to follow.
+
+        This intentionally relies only on declarative scene data: a flow must either
+        explicitly follow its matching draw animation or use literal timestamps that begin
+        after that draw completes.  More elaborate semantic timing is resolved later by the
+        scene graph and remains outside schema validation.
+        """
+        persistent_objects = _index_objects(self.objects)
+        for scene in self.scenes:
+            object_index = persistent_objects | _index_objects(scene.objects)
+            draws_by_target: dict[str, list[AnimSpec]] = {}
+            for animation in scene.animations:
+                if animation.action != AnimAction.DRAW:
+                    continue
+                for target in _animation_target_ids(animation):
+                    draws_by_target.setdefault(target, []).append(animation)
+
+            for animation in scene.animations:
+                if animation.action != AnimAction.FLOW:
+                    continue
+
+                targets = _animation_target_ids(animation)
+                if not targets:
+                    raise ValueError(
+                        f"Flow animation {_animation_label(animation)!r} in scene "
+                        f"{_scene_label(scene)!r} requires a connector target."
+                    )
+
+                for target in targets:
+                    target_object = object_index.get(target)
+                    if target_object is None:
+                        raise ValueError(
+                            f"Flow animation {_animation_label(animation)!r} in scene "
+                            f"{_scene_label(scene)!r} targets unknown object {target!r}."
+                        )
+                    if target_object.type != ObjectType.CONNECTOR:
+                        raise ValueError(
+                            f"Flow animation {_animation_label(animation)!r} in scene "
+                            f"{_scene_label(scene)!r} must target a connector; {target!r} is "
+                            f"a {target_object.type.value!r} object."
+                        )
+
+                    matching_draws = draws_by_target.get(target, [])
+                    if not matching_draws:
+                        raise ValueError(
+                            f"Flow animation {_animation_label(animation)!r} in scene "
+                            f"{_scene_label(scene)!r} needs a preceding draw animation for "
+                            f"connector {target!r}."
+                        )
+                    if not any(_flow_follows_draw(animation, draw) for draw in matching_draws):
+                        raise ValueError(
+                            f"Flow animation {_animation_label(animation)!r} in scene "
+                            f"{_scene_label(scene)!r} must follow the draw animation for "
+                            f"connector {target!r}. Use `after` with that draw animation's ID, "
+                            "or literal non-overlapping `at` timestamps."
+                        )
+
+            for animation in scene.animations:
+                if animation.action != AnimAction.METER_TO:
+                    continue
+                for target in _animation_target_ids(animation):
+                    target_object = object_index.get(target)
+                    if target_object is None:
+                        raise ValueError(
+                            f"Meter-to animation {_animation_label(animation)!r} in scene "
+                            f"{_scene_label(scene)!r} targets unknown object {target!r}."
+                        )
+                    if target_object.type != ObjectType.LINEAR_METER:
+                        raise ValueError(
+                            f"Meter-to animation {_animation_label(animation)!r} in scene "
+                            f"{_scene_label(scene)!r} must target a linear_meter; {target!r} "
+                            f"is a {target_object.type.value!r} object."
+                        )
+
+        return self
+
+
+# v1.5 introduces editorial defaults and strict top-level document metadata.
+_EDITORIAL_DEFAULTS_VERSION = (1, 5)
+_DOCUMENT_TOP_LEVEL_FIELDS = frozenset({"version", "meta", "objects", "scenes"})
+_MISPLACED_META_FIELDS = frozenset(
+    {
+        "title",
+        "resolution",
+        "fps",
+        "theme",
+        "audience",
+        "story_contract",
+        "show_subtitles",
+        "show_narration",
+        "pacing",
+        "continuity",
+        "continuity_duration",
+        "glow_release_padding",
+        "video_bookends",
+    }
+)
+
+
+def _is_legacy_document_version(value: object) -> bool:
+    """Return whether an explicitly versioned document predates DSL 1.5."""
+    if not isinstance(value, str):
+        return False
+    match = re.fullmatch(r"\s*(\d+)(?:\.(\d+))?(?:\.\d+)*\s*", value)
+    if not match:
+        return False
+    major = int(match.group(1))
+    minor = int(match.group(2) or 0)
+    return (major, minor) < _EDITORIAL_DEFAULTS_VERSION
+
+
+def _index_objects(objects: list[ObjectSpec]) -> dict[str, ObjectSpec]:
+    """Index scene objects and nested children by explicit ID."""
+    indexed: dict[str, ObjectSpec] = {}
+    for obj in objects:
+        if obj.id:
+            indexed[obj.id] = obj
+        if obj.children:
+            indexed.update(_index_objects(obj.children))
+    return indexed
+
+
+def _animation_target_ids(animation: AnimSpec) -> list[str]:
+    """Return concrete target IDs without accepting missing or blank targets."""
+    if isinstance(animation.target, str):
+        return [animation.target] if animation.target else []
+    if isinstance(animation.target, list):
+        return [target for target in animation.target if target]
+    return []
+
+
+def _flow_follows_draw(flow: AnimSpec, draw: AnimSpec) -> bool:
+    """Check the two timing shapes that can be proven without timeline resolution."""
+    if flow.after and draw.id and flow.after == draw.id:
+        return True
+    if (
+        flow.at is None
+        or draw.at is None
+        or flow.at == "auto"
+        or draw.at == "auto"
+        or draw.stagger is not None
+    ):
+        return False
+    try:
+        return parse_duration(flow.at) >= parse_duration(draw.at) + parse_duration(draw.duration)
+    except ValueError:
+        return False
+
+
+def _animation_label(animation: AnimSpec) -> str:
+    return animation.id or animation.action.value
+
+
+def _scene_label(scene: SceneSpec) -> str:
+    return scene.id or "(unnamed scene)"

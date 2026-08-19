@@ -26,6 +26,7 @@ dev = [
 openai = "kaivra_voice.openai:OpenAIProvider"
 elevenlabs = "kaivra_voice.elevenlabs:ElevenLabsProvider"
 local = "kaivra_voice.local:LocalProvider"
+qwen = "kaivra_voice.qwen:QwenProvider"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/kaivra_voice"]

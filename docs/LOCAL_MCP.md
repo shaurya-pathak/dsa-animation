@@ -95,17 +95,18 @@ Use `kaivra doctor` if you want to verify the exact binary path your MCP client 
 The MCP is intentionally small and opinionated:
 
 1. `add_theme` creates a reusable custom theme JSON in the workspace.
-2. `plan_animation` gathers topic, audience, theme, structure, and voice choices.
-3. Write the animation JSON directly in `animations/`.
-4. `check_animation` validates, normalizes, and audits the result.
-5. `preview_animation` writes an HTML preview and a PNG still.
-6. `render_animation` writes the final PNG, MP4, or WebM artifact.
+2. For a narrated layperson explainer, create and review `animations/<slug>.story.md`.
+3. `plan_animation` gathers topic, audience, theme, structure, and voice choices from that brief.
+4. Write the animation JSON in `animations/` only after the story brief is approved.
+5. `check_animation` validates, normalizes, and audits the result.
+6. `preview_animation` writes an HTML preview and a PNG still.
+7. `render_animation` writes the final PNG, MP4, or WebM artifact.
 
 `animations/` is a local workspace and is gitignored by default. If a draft graduates into a curated repo example, move it into `examples/` intentionally. Keep throwaway or alternate example variants under `examples/local/`.
 
-The MCP is tuned for narrated process explainers: prefer `process_explainer` for narrated flows, use `visual_explainer` when one strong concept diagram is the right core visual, and build scene-specific diagrams from boxes, connectors, groups, and tokens. Use connector `draw` animations to show flow. Prefer persistent document-level objects when labels, chapter trackers, or shared state should stay on screen across scenes. Reuse the same `id` and the same content when a value carries from one scene into the next so continuity can create a smooth carry-over. Prefer `fade-in` for smooth reveals, and use `appear` when you want an intentional instant snap-in. Write narration in clear spoken English and avoid filenames, repo paths, and internal component inventories unless the user explicitly wants implementation detail. Revealing a group will also reveal descendants that do not have their own visibility animation.
+For every narrated layperson explainer, the Markdown brief is required before JSON authoring: read it, review it for causal gaps, then make the JSON serve it. See the [story-first explainer guide](STORY_FIRST_EXPLAINERS.md). The canonical pair is [the forward-propagation story](../examples/reference/forward_propagation.story.md) and its [reference JSON](../examples/reference/forward_propagation.json); the story is the source of truth, and the JSON is an implementation reference rather than a sequence or number set to copy.
 
-For the strongest current narrated process example, read `examples/reference/perspectiv_medcase_process_explainer.json` or fetch `kaivra://example/perspectiv_medcase_process_explainer` through MCP.
+Use `motion_explainer` for narrated work. Write one choreography map for an evolving visual world, then let the same actors move, combine, split, and change state. A single creative director owns the full timeline; specialist agents review it rather than building disconnected scenes. Themes supply palette and typography, not composition. Do not start with a title/body/footer template, repeated cards, chapter rails, or ornamental pulse and glow. Use `move-to`, `replace`, `draw`, `flow`, and meaningful scale changes to explain cause; reserve `fade-in` and `appear` for genuine entrances. Reuse stable IDs and `actor_id` when an actor persists across an edit boundary. Write narration in natural spoken English and avoid filenames, repo paths, or internal inventories unless explicitly requested.
 
 `add_theme` accepts a theme name, an optional `base_theme`, and an `overrides` object whose keys match the `ThemeSpec` fields, such as `accent`, `background_color`, `box_fill`, or `box_border`.
 
@@ -124,8 +125,7 @@ For offline local narration, the recommended loop is:
 
 ## Patterns
 
-- `process_explainer`
-- `visual_explainer`
+- `motion_explainer`
 - `algorithm_walkthrough`
 - `architecture_explainer`
 - `before_after_comparison`

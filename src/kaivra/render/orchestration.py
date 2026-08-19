@@ -26,7 +26,7 @@ from kaivra.audio.mux import (
 )
 from kaivra.audio.timings import AudioCue, AudioTimingData, SceneAudioTiming, load_audio_timing_data
 from kaivra.dsl.parser import parse_string
-from kaivra.dsl.retime import retime_document_to_audio_timings
+from kaivra.dsl.retime import format_duration, retime_document_to_audio_timings
 from kaivra.dsl.timing import TimingConfig, resolve_timing_config
 from kaivra.render.cairo_renderer import CairoRenderer
 from kaivra.render.video.exporter import export_video
@@ -36,8 +36,8 @@ from kaivra.themes.registry import get_theme
 ProgressReporter = Callable[[float, str], None]
 _VIDEO_INTRO_SCENE_ID = "__kaivra_video_intro__"
 _VIDEO_OUTRO_SCENE_ID = "__kaivra_video_outro__"
-_VOICE_SCENE_LEAD_IN_SECONDS = 0.65
-_VOICE_SCENE_HOLD_SECONDS = 0.55
+_VOICE_SCENE_LEAD_IN_SECONDS = 0.25
+_VOICE_SCENE_HOLD_SECONDS = 0.40
 _VOICE_BOOKEND_HOLD_SECONDS = 0.8
 logger = logging.getLogger(__name__)
 
@@ -185,6 +185,7 @@ def build_render_graph(
     audio_timing_data: AudioTimingData | None = None,
     theme_search_roots: Iterable[str | Path] | None = None,
     timing_config: TimingConfig | None = None,
+    fit_scene_durations_to_audio: bool = False,
 ) -> tuple[Any, Any]:
     """Resolve the theme and build the scene graph, optionally retimed to audio."""
     if audio_timings_path is not None and audio_timing_data is not None:
@@ -193,7 +194,11 @@ def build_render_graph(
     if audio_timings_path is not None:
         audio_timing_data = load_audio_timing_data(audio_timings_path)
 
-    if audio_timing_data is not None and not _document_uses_semantic_timing(doc):
+    if (
+        audio_timing_data is not None
+        and not fit_scene_durations_to_audio
+        and not _document_uses_semantic_timing(doc)
+    ):
         doc = _retime_document(doc, audio_timing_data)
 
     theme = get_theme(doc.meta.theme, search_roots=theme_search_roots)
@@ -202,6 +207,7 @@ def build_render_graph(
         theme,
         timing_config=timing_config,
         audio_timing_data=audio_timing_data,
+        fit_scene_durations_to_audio=fit_scene_durations_to_audio,
     )
     return graph, theme
 
@@ -262,7 +268,7 @@ def _apply_voice_render_defaults(doc: Any, *, voice_provider: str | None) -> Any
     """Apply provider-aware defaults before generating voice audio."""
     provider_name = resolve_voice_provider_name(voice_provider)
     doc = _apply_voice_subtitle_defaults(doc, provider_name=provider_name)
-    if provider_name == "local":
+    if provider_name in {"local", "qwen"}:
         doc = _apply_local_voice_narration_defaults(doc)
     return doc
 
@@ -330,13 +336,28 @@ def _write_retimed_sidecar(
     *,
     audio_timing_data: AudioTimingData | None = None,
     audio_timings_path: str | Path | None = None,
+    resolved_scene_durations: dict[str, float] | None = None,
 ) -> str | None:
     if audio_timing_data is None and audio_timings_path is None:
         return None
     if audio_timing_data is None:
         audio_timing_data = load_audio_timing_data(audio_timings_path)
 
-    retimed_doc = _retime_document(doc, audio_timing_data)
+    if resolved_scene_durations is not None or _document_uses_semantic_timing(doc):
+        # Preserve semantic selectors and authored `at` fallbacks. For a voice
+        # render, record the exact duration used by the graph for every scene.
+        raw_doc = doc.model_dump(mode="json", by_alias=True, exclude_none=True)
+        duration_map = resolved_scene_durations or {
+            scene_id: timing.duration_seconds
+            for scene_id, timing in audio_timing_data.scenes.items()
+        }
+        for scene in raw_doc.get("scenes", []):
+            scene_id = scene.get("id")
+            if scene_id in duration_map:
+                scene["duration"] = format_duration(duration_map[scene_id])
+        retimed_doc = parse_string(json.dumps(raw_doc), format="json")
+    else:
+        retimed_doc = _retime_document(doc, audio_timing_data)
     sidecar_path = output_path.with_name(f"{output_path.stem}.retimed.json")
     sidecar_path.write_text(
         json.dumps(
@@ -518,6 +539,39 @@ def _offset_audio_cues(cues: tuple[AudioCue, ...], seconds: float) -> tuple[Audi
     )
 
 
+def _estimate_narration_word_cues(
+    narration: str,
+    duration_seconds: float,
+    *,
+    offset_seconds: float = 0.0,
+) -> tuple[AudioCue, ...]:
+    """Estimate deterministic word windows when a TTS provider returns no cues.
+
+    The final measured clip duration is authoritative. Character-weighted windows
+    preserve spoken order and give explicit animation cue phrases useful anchors.
+    """
+    words = re.findall(r"\S+", narration.strip())
+    if not words or duration_seconds <= 0:
+        return ()
+
+    weights = [max(2.0, float(len(re.sub(r"[^\w]", "", word)))) for word in words]
+    total_weight = sum(weights)
+    cursor = max(0.0, offset_seconds)
+    cues: list[AudioCue] = []
+    for word, weight in zip(words, weights):
+        word_duration = duration_seconds * (weight / total_weight)
+        cues.append(
+            AudioCue(
+                start_seconds=cursor,
+                duration_seconds=word_duration,
+                text=word,
+                kind="estimated-word",
+            )
+        )
+        cursor += word_duration
+    return tuple(cues)
+
+
 def _render_with_voice(
     doc: Any,
     *,
@@ -587,24 +641,34 @@ def _render_with_voice(
 
             prepared_audio_per_scene[scene.id] = prepared_audio_path
             measured_duration = measure_audio_duration(str(prepared_audio_path))
+            if result.cues:
+                resolved_cues = _offset_audio_cues(result.cues, lead_in_seconds)
+            else:
+                resolved_cues = _estimate_narration_word_cues(
+                    scene.narration,
+                    max(0.01, measured_duration - lead_in_seconds),
+                    offset_seconds=lead_in_seconds,
+                )
             scene_timings[scene.id] = SceneAudioTiming(
                 id=scene.id,
                 duration_seconds=_voice_scene_duration(scene.id, measured_duration),
-                cues=_offset_audio_cues(result.cues, lead_in_seconds),
+                cues=resolved_cues,
             )
 
         timing_data = AudioTimingData(scenes=scene_timings)
         _emit_progress(progress, 0.58, "Retiming the animation to narration.")
-        retimed_document_path = _write_retimed_sidecar(
-            doc,
-            output_path,
-            audio_timing_data=timing_data,
-        )
         graph, theme = build_render_graph(
             doc,
             audio_timing_data=timing_data,
             theme_search_roots=theme_search_roots,
             timing_config=timing_config,
+            fit_scene_durations_to_audio=True,
+        )
+        retimed_document_path = _write_retimed_sidecar(
+            doc,
+            output_path,
+            audio_timing_data=timing_data,
+            resolved_scene_durations={scene.id: scene.duration for scene in graph.scenes},
         )
 
         def video_progress(done: int, total: int) -> None:
@@ -662,6 +726,9 @@ def _render_with_voice(
         _emit_progress(progress, 0.95, "Muxing narration onto the rendered video.")
         mux_audio(str(silent_path), str(concat_path), str(output_path))
     finally:
+        close_provider = getattr(provider, "close", None)
+        if callable(close_provider):
+            close_provider()
         silent_path.unlink(missing_ok=True)
         concat_path.unlink(missing_ok=True)
         for path in {*generated_paths, *temp_audio_paths}:

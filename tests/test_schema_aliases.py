@@ -11,7 +11,7 @@ def test_show_subtitles_is_the_preferred_serialized_field_name() -> None:
     doc = parse_string(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"theme": "modern", "show_subtitles": False},
                 "scenes": [],
             }
@@ -32,7 +32,7 @@ def test_show_narration_remains_a_backward_compatible_input_alias() -> None:
     doc = parse_string(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"theme": "modern", "show_narration": False},
                 "scenes": [],
             }
@@ -45,12 +45,33 @@ def test_show_narration_remains_a_backward_compatible_input_alias() -> None:
     assert doc.meta.subtitles_were_explicitly_set() is True
 
 
+def test_story_contract_is_supported_metadata() -> None:
+    doc = parse_string(
+        json.dumps(
+            {
+                "version": "1.5",
+                "meta": {
+                    "theme": "editorial",
+                    "audience": "layperson",
+                    "story_contract": "dog-or-cat.story.md",
+                },
+                "scenes": [],
+            }
+        ),
+        format="json",
+    )
+
+    assert doc.meta.story_contract == "dog-or-cat.story.md"
+    schema = doc.model_json_schema()
+    assert "story_contract" in schema["$defs"]["MetaSpec"]["properties"]
+
+
 def test_animation_style_is_rejected_for_non_emphasis_actions() -> None:
     with pytest.raises(ValueError, match="`style` is only supported"):
         parse_string(
             json.dumps(
                 {
-                    "version": "1.3",
+                    "version": "1.5",
                     "meta": {"theme": "modern"},
                     "scenes": [
                         {
@@ -74,7 +95,7 @@ def test_translate_is_the_supported_motion_field() -> None:
     doc = parse_string(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"theme": "modern"},
                 "scenes": [
                     {
@@ -101,7 +122,7 @@ def test_legacy_pixel_offsets_are_accepted() -> None:
     doc = parse_string(
         json.dumps(
             {
-                "version": "1.3",
+                "version": "1.5",
                 "meta": {"theme": "modern"},
                 "scenes": [
                     {
@@ -132,7 +153,7 @@ def test_animation_rejects_multiple_semantic_timing_anchors() -> None:
         parse_string(
             json.dumps(
                 {
-                    "version": "1.3",
+                    "version": "1.5",
                     "meta": {"theme": "modern"},
                     "scenes": [
                         {
@@ -158,7 +179,7 @@ def test_absolute_layout_is_rejected() -> None:
         parse_string(
             json.dumps(
                 {
-                    "version": "1.3",
+                    "version": "1.5",
                     "meta": {"theme": "modern"},
                     "scenes": [{"layout": "absolute", "objects": []}],
                 }

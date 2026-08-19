@@ -1,1549 +1,1010 @@
 {
-  "version": "1.3",
+  "version": "1.5",
   "meta": {
-    "title": "Forward Propagation",
-    "resolution": [
-      1920,
-      1080
-    ],
+    "title": "How a Model Chooses Between a Dog and a Cat",
+    "resolution": [1920, 1080],
     "fps": 30,
-    "theme": "material",
+    "theme": "editorial",
+    "audience": "layperson",
+    "story_contract": "forward_propagation.story.md",
     "show_subtitles": false,
     "pacing": "educational",
     "continuity": true,
     "continuity_duration": "1.2s",
-    "glow_release_padding": "1.0s",
-    "video_bookends": true
+    "video_bookends": false
   },
-  "objects": [
-    {
-      "type": "group",
-      "id": "chapters",
-      "position": "bottom",
-      "children": [
-        {
-          "type": "token",
-          "id": "step_overview",
-          "content": "1  Overview"
-        },
-        {
-          "type": "token",
-          "id": "step_hidden_sum",
-          "content": "2  Hidden sum"
-        },
-        {
-          "type": "token",
-          "id": "step_bias",
-          "content": "3  Add bias"
-        },
-        {
-          "type": "token",
-          "id": "step_relu",
-          "content": "4  ReLU"
-        },
-        {
-          "type": "token",
-          "id": "step_output",
-          "content": "5  Output logit"
-        },
-        {
-          "type": "token",
-          "id": "step_predict",
-          "content": "6  Prediction"
-        }
-      ],
-      "layout": {
-        "type": "carousel",
-        "gap": "medium",
-        "direction": "horizontal",
-        "align": "center",
-        "curve": 16.0,
-        "active_scale": 1.16,
-        "inactive_scale": 0.92
-      }
-    }
-  ],
+  "objects": [],
   "scenes": [
     {
-      "id": "overview",
-      "duration": "19.683s",
-      "layout": {
-        "type": "center",
-        "gap": "medium",
-        "direction": "horizontal",
-        "align": "center"
-      },
-      "template": "one-column",
-      "narration": "Before we zoom into the arithmetic, let's anchor the purpose of forward propagation. At this point the network already has fixed weights and biases. Its job is to take one input example, transform those raw numbers into hidden evidence, and then turn that evidence into a prediction.",
-      "objects": [
-        {
-          "type": "text",
-          "id": "overview_title",
-          "content": "Forward Propagation in One Pass",
-          "style": "heading"
-        },
-        {
-          "type": "group",
-          "id": "overview_stack",
-          "visible": true,
-          "children": [
-            {
-              "type": "group",
-              "id": "pipeline_row",
-              "children": [
-                {
-                  "type": "box",
-                  "id": "input_vector",
-                  "content": "Input x = [0.70, -0.40]"
-                },
-                {
-                  "type": "box",
-                  "id": "hidden_layer_summary",
-                  "content": "Hidden layer: z = W x + b, h = ReLU(z)"
-                },
-                {
-                  "type": "box",
-                  "id": "prediction_summary",
-                  "content": "Output: y_hat = sigmoid(logit)"
-                }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "large",
-                "direction": "horizontal",
-                "align": "center"
-              }
-            },
-            {
-              "type": "group",
-              "id": "formula_row",
-              "children": [
-                {
-                  "type": "token",
-                  "id": "formula_sum",
-                  "content": "weights scale influence"
-                },
-                {
-                  "type": "token",
-                  "id": "formula_bias",
-                  "content": "bias shifts baseline"
-                },
-                {
-                  "type": "token",
-                  "id": "formula_relu",
-                  "content": "ReLU keeps positive signal"
-                },
-                {
-                  "type": "token",
-                  "id": "formula_output",
-                  "content": "sigmoid makes a probability"
-                }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "medium",
-                "direction": "horizontal",
-                "align": "center"
-              }
-            }
-          ],
-          "layout": {
-            "type": "stack",
-            "gap": "large",
-            "direction": "vertical",
-            "align": "center"
-          }
-        },
-        {
-          "type": "connector",
-          "id": "overview_in_to_hidden",
-          "from": "input_vector",
-          "to": "hidden_layer_summary"
-        },
-        {
-          "type": "connector",
-          "id": "overview_hidden_to_out",
-          "from": "hidden_layer_summary",
-          "to": "prediction_summary"
-        }
-      ],
-      "animations": [
-        {
-          "action": "fade-in",
-          "target": "overview_title",
-          "at": "0s",
-          "duration": "0.861s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "pipeline_row",
-          "at": "0.984s",
-          "duration": "1.23s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "input_vector",
-          "at": "1.476s",
-          "duration": "0.984s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "draw",
-          "target": "overview_in_to_hidden",
-          "at": "3.445s",
-          "duration": "1.23s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "hidden_layer_summary",
-          "at": "3.691s",
-          "duration": "0.984s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "hidden_layer_summary",
-          "at": "5.29s",
-          "duration": "2.46s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "draw",
-          "target": "overview_hidden_to_out",
-          "at": "8.242s",
-          "duration": "1.23s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "prediction_summary",
-          "at": "8.488s",
-          "duration": "0.984s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "prediction_summary",
-          "at": "10.088s",
-          "duration": "2.46s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "success"
-        },
-        {
-          "action": "fade-in",
-          "target": "formula_row",
-          "at": "13.04s",
-          "duration": "0.984s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "formula_sum",
-          "at": "13.286s",
-          "duration": "0.738s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "formula_bias",
-          "at": "13.901s",
-          "duration": "0.738s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "formula_relu",
-          "at": "14.516s",
-          "duration": "0.738s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "formula_output",
-          "at": "15.131s",
-          "duration": "0.738s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "step_overview",
-          "at": "0s",
-          "duration": "17.961s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "scale",
-          "target": "step_overview",
-          "at": "0.123s",
-          "duration": "0.984s",
-          "easing": "ease-in-out",
-          "scale_factor": 1.12
-        }
-      ],
+      "id": "one_photo",
+      "duration": "20s",
+      "layout": {"type": "center", "gap": "large", "align": "center"},
       "auto_visible": false,
-      "include_persistent_objects": true,
-      "show_progress_bar": true
-    },
-    {
-      "id": "hidden_sum",
-      "duration": "25.117s",
-      "layout": {
-        "type": "center",
-        "gap": "medium",
-        "direction": "horizontal",
-        "align": "center"
-      },
-      "template": "one-column",
-      "narration": "Now let's slow down and look at why this weighted sum exists. Each weight tells the neuron how strongly to listen to one input. The multiplication scales that input's influence, and the sign tells us whether it supports or opposes the neuron firing. Then we add the contributions together because the neuron is pooling evidence from all of its incoming inputs.",
+      "show_progress_bar": false,
+      "narration": "Have you ever wondered what happens inside a model when it sees a new photo? How can it decide whether the animal is a dog or a cat? It does not jump straight to the answer. It begins with small clues in the picture.",
       "objects": [
         {
-          "type": "text",
-          "id": "hidden_sum_title",
-          "content": "1. Compute One Hidden Weighted Sum",
-          "style": "heading"
-        },
-        {
           "type": "group",
-          "id": "hidden_sum_stack",
+          "id": "opening_world",
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
           "visible": true,
           "children": [
             {
-              "type": "group",
-              "id": "term_row",
-              "visible": true,
-              "children": [
-                {
-                  "type": "box",
-                  "id": "term_1",
-                  "content": "0.70 x 0.50 = 0.35"
-                },
-                {
-                  "type": "box",
-                  "id": "term_2",
-                  "content": "-0.40 x -0.30 = 0.12"
-                }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "large",
-                "direction": "horizontal",
-                "align": "center"
-              }
+              "type": "text",
+              "id": "dog_choice",
+              "content": "DOG",
+              "style": "metric-coral",
+              "size_variant": "hero",
+              "visible": false
             },
             {
-              "type": "box",
-              "id": "partial_sum",
-              "content": "0.35 + 0.12 = 0.47"
+              "type": "pet_portrait",
+              "id": "hero_pet",
+              "actor_id": "hero_pet",
+              "continuity_mode": "position_only",
+              "pet_kind": "mystery",
+              "show_feature_labels": false,
+              "style": "gold",
+              "size_variant": "hero",
+              "visible": false
             },
             {
-              "type": "group",
-              "id": "weight_note_row",
-              "children": [
-                {
-                  "type": "token",
-                  "id": "term_1_label",
-                  "content": "x1 contributes evidence to h1"
-                },
-                {
-                  "type": "token",
-                  "id": "term_2_label",
-                  "content": "x2 contributes evidence to h1"
-                }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "medium",
-                "direction": "horizontal",
-                "align": "center"
-              }
+              "type": "text",
+              "id": "cat_choice",
+              "content": "CAT",
+              "style": "metric-cyan",
+              "size_variant": "hero",
+              "visible": false
             }
-          ],
-          "layout": {
-            "type": "stack",
-            "gap": "large",
-            "direction": "vertical",
-            "align": "center"
-          }
-        },
-        {
-          "type": "connector",
-          "id": "term_1_to_sum",
-          "from": "term_1",
-          "to": "partial_sum"
-        },
-        {
-          "type": "connector",
-          "id": "term_2_to_sum",
-          "from": "term_2",
-          "to": "partial_sum"
+          ]
         }
       ],
       "animations": [
         {
+          "id": "reveal_pet",
           "action": "fade-in",
-          "target": "hidden_sum_title",
-          "at": "0s",
-          "duration": "0.977s",
-          "easing": "ease-in-out"
+          "target": "hero_pet",
+          "at": "1.5s",
+          "cue": "new photo",
+          "duration": "1.2s"
         },
         {
+          "id": "reveal_choices",
           "action": "fade-in",
-          "target": "term_1",
-          "at": "1.256s",
-          "duration": "1.116s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "term_1",
-          "at": "2.651s",
-          "duration": "2.233s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "fade-in",
-          "target": "term_2",
+          "target": ["dog_choice", "cat_choice"],
           "at": "6s",
-          "duration": "1.116s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "term_2",
-          "at": "7.395s",
-          "duration": "2.233s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "fade-in",
-          "target": "weight_note_row",
-          "at": "10.605s",
-          "duration": "1.116s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "term_1_label",
-          "at": "10.884s",
-          "duration": "0.837s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "term_2_label",
-          "at": "11.582s",
-          "duration": "0.837s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "draw",
-          "target": "term_1_to_sum",
-          "at": "14.233s",
-          "duration": "1.256s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "draw",
-          "target": "term_2_to_sum",
-          "at": "14.93s",
-          "duration": "1.256s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "partial_sum",
-          "at": "15.768s",
-          "duration": "1.116s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "partial_sum",
-          "at": "17.582s",
-          "duration": "2.791s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "success"
-        },
-        {
-          "action": "highlight",
-          "target": "step_hidden_sum",
-          "at": "0s",
-          "duration": "23.163s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "scale",
-          "target": "step_hidden_sum",
-          "at": "0.14s",
-          "duration": "1.116s",
-          "easing": "ease-in-out",
-          "scale_factor": 1.12
+          "cue": "dog or a cat",
+          "duration": "1s",
+          "stagger": "0.5s"
         }
-      ],
-      "auto_visible": false,
-      "include_persistent_objects": true,
-      "show_progress_bar": true
+      ]
     },
     {
-      "id": "add_bias",
-      "duration": "25.535s",
-      "layout": {
-        "type": "center",
-        "gap": "medium",
-        "direction": "horizontal",
-        "align": "center"
-      },
-      "template": "one-column",
-      "narration": "The bias is not just a random extra number. It lets the neuron shift its baseline before the activation function sees the result, which means it controls how easy or hard it is for that neuron to turn on. Here the weighted evidence is zero point four seven, the bias nudges it upward by zero point one zero, and that moves the pre-activation to zero point five seven.",
+      "id": "learned_earlier",
+      "duration": "34s",
+      "layout": {"type": "center", "gap": "large", "align": "center"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "Let's assume we already have a trained model. It has seen lots of dogs and cats and figured out which clues help tell them apart. To keep things simple, let's say it only looks for two things: floppy ears and a long snout. It has also learned how much each clue should count. Each saved setting is called a weight. Those weights stay fixed so that any change in the answer comes from the new photo, not from changing the rules.",
       "objects": [
         {
-          "type": "text",
-          "id": "bias_title",
-          "content": "2. Add the Bias Term",
-          "style": "heading"
-        },
-        {
           "type": "group",
-          "id": "bias_stack",
+          "id": "saved_world",
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
           "visible": true,
           "children": [
             {
+              "type": "pet_portrait",
+              "id": "hero_pet",
+              "actor_id": "hero_pet",
+              "continuity_mode": "position_only",
+              "pet_kind": "mystery",
+              "show_feature_labels": false,
+              "style": "gold",
+              "size_variant": "hero",
+              "visible": true
+            },
+            {
               "type": "group",
-              "id": "bias_inputs_row",
+              "id": "saved_rules",
+              "layout": {"type": "stack", "gap": "medium", "align": "center"},
               "visible": true,
               "children": [
                 {
-                  "type": "box",
-                  "id": "partial_sum",
-                  "content": "0.35 + 0.12 = 0.47"
+                  "type": "linear_meter",
+                  "id": "saved_ear_rule",
+                  "style": "metric-coral",
+                  "meter_min": 0,
+                  "meter_max": 1,
+                  "meter_value": 0.5,
+                  "meter_left_label": "COUNTS LESS",
+                  "meter_right_label": "COUNTS MORE",
+                  "meter_value_label": "× 0.50",
+                  "meter_caption": "FLOPPY EARS · WEIGHT",
+                  "visible": false
                 },
                 {
-                  "type": "box",
-                  "id": "bias_value",
-                  "content": "bias = +0.10"
+                  "type": "linear_meter",
+                  "id": "saved_snout_rule",
+                  "style": "metric-cyan",
+                  "meter_min": 0,
+                  "meter_max": 1,
+                  "meter_value": 0.55,
+                  "meter_left_label": "COUNTS LESS",
+                  "meter_right_label": "COUNTS MORE",
+                  "meter_value_label": "× 0.55",
+                  "meter_caption": "LONG SNOUT · WEIGHT",
+                  "visible": false
                 }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "large",
-                "direction": "horizontal",
-                "align": "center"
-              }
-            },
-            {
-              "type": "box",
-              "id": "biased_total",
-              "content": "0.47 + 0.10 = 0.57"
-            },
-            {
-              "type": "box",
-              "id": "z1_value",
-              "content": "z1 = 0.57"
-            },
-            {
-              "type": "token",
-              "id": "bias_note",
-              "content": "bias shifts the neuron's turn-on threshold"
+              ]
             }
-          ],
-          "layout": {
-            "type": "stack",
-            "gap": "large",
-            "direction": "vertical",
-            "align": "center"
-          }
-        },
-        {
-          "type": "connector",
-          "id": "sum_to_biased_total",
-          "from": "partial_sum",
-          "to": "biased_total"
-        },
-        {
-          "type": "connector",
-          "id": "bias_to_biased_total",
-          "from": "bias_value",
-          "to": "biased_total"
-        },
-        {
-          "type": "connector",
-          "id": "biased_total_to_z1",
-          "from": "biased_total",
-          "to": "z1_value"
+          ]
         }
       ],
       "animations": [
         {
+          "id": "reveal_saved_ear_rule",
           "action": "fade-in",
-          "target": "bias_title",
-          "at": "0s",
-          "duration": "0.993s",
-          "easing": "ease-in-out"
+          "target": "saved_ear_rule",
+          "at": "8s",
+          "cue": "floppy ears",
+          "duration": "1s"
         },
         {
+          "id": "reveal_saved_snout_rule",
           "action": "fade-in",
-          "target": "partial_sum",
-          "at": "1.277s",
-          "duration": "1.135s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "bias_value",
-          "at": "4.823s",
-          "duration": "1.135s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "bias_value",
-          "at": "6.384s",
-          "duration": "2.128s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "draw",
-          "target": "sum_to_biased_total",
-          "at": "10.214s",
-          "duration": "1.277s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "draw",
-          "target": "bias_to_biased_total",
-          "at": "10.923s",
-          "duration": "1.277s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "biased_total",
-          "at": "11.774s",
-          "duration": "1.135s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "biased_total",
-          "at": "13.618s",
-          "duration": "2.553s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "draw",
-          "target": "biased_total_to_z1",
-          "at": "17.023s",
-          "duration": "1.135s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "z1_value",
-          "at": "17.591s",
-          "duration": "1.135s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "z1_value",
-          "at": "19.435s",
-          "duration": "2.553s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "success"
-        },
-        {
-          "action": "fade-in",
-          "target": "bias_note",
-          "at": "21.279s",
-          "duration": "0.993s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "step_bias",
-          "at": "0s",
-          "duration": "23.549s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "scale",
-          "target": "step_bias",
-          "at": "0.142s",
-          "duration": "1.135s",
-          "easing": "ease-in-out",
-          "scale_factor": 1.12
+          "target": "saved_snout_rule",
+          "at": "12.5s",
+          "cue": "long snout",
+          "duration": "1s"
         }
-      ],
-      "auto_visible": false,
-      "include_persistent_objects": true,
-      "show_progress_bar": true
+      ]
     },
     {
-      "id": "relu",
-      "duration": "29.296s",
-      "layout": {
-        "type": "center",
-        "gap": "medium",
-        "direction": "horizontal",
-        "align": "center"
-      },
-      "template": "one-column",
-      "narration": "ReLU matters because it is what keeps the whole network from collapsing into one big linear equation. Its rule is simple: keep positive evidence, and clip negative values to zero. That introduces nonlinearity, which is what lets deeper networks model more interesting patterns. In this example h one survives because it is positive, while h two gets shut off because its pre-activation is negative.",
+      "id": "two_clue_paths",
+      "duration": "41s",
+      "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "In our photo, the ears look quite floppy: seven out of ten. That is not a seventy-percent dog answer; it only measures this clue. The model passes that clue through the ear weight, times zero point five. In everyday terms, the weight turns the clue down. Seven tenths becomes a push of zero point three five toward dog. The snout works the same way. It measures four out of ten, and its weight is zero point five five. That creates a second push: zero point two two toward dog.",
       "objects": [
         {
-          "type": "text",
-          "id": "relu_title",
-          "content": "3. Apply ReLU to Hidden Neurons",
-          "style": "heading"
-        },
-        {
           "type": "group",
-          "id": "relu_row",
+          "id": "clue_world",
+          "grid": {"row": 1, "col": 1},
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
           "visible": true,
           "children": [
             {
-              "type": "group",
-              "id": "positive_lane",
-              "visible": true,
-              "children": [
-                {
-                  "type": "box",
-                  "id": "z1_value",
-                  "content": "z1 = 0.57"
-                },
-                {
-                  "type": "box",
-                  "id": "relu_1",
-                  "content": "ReLU"
-                },
-                {
-                  "type": "box",
-                  "id": "h1_act",
-                  "content": "h1 = 0.57"
-                }
-              ],
-              "layout": {
-                "type": "stack",
-                "gap": "medium",
-                "direction": "vertical",
-                "align": "center"
-              }
+              "type": "pet_portrait",
+              "id": "hero_pet",
+              "actor_id": "hero_pet",
+              "continuity_mode": "position_only",
+              "pet_kind": "mystery",
+              "show_feature_labels": false,
+              "style": "gold",
+              "size_variant": "hero",
+              "visible": true
             },
             {
               "type": "group",
-              "id": "negative_lane",
-              "visible": true,
-              "children": [
-                {
-                  "type": "box",
-                  "id": "z2_value",
-                  "content": "z2 = -0.56"
-                },
-                {
-                  "type": "box",
-                  "id": "relu_2",
-                  "content": "ReLU"
-                },
-                {
-                  "type": "box",
-                  "id": "h2_act",
-                  "content": "h2 = 0.00"
-                }
-              ],
-              "layout": {
-                "type": "stack",
-                "gap": "medium",
-                "direction": "vertical",
-                "align": "center"
-              }
-            },
-            {
-              "type": "group",
-              "id": "relu_note_row",
-              "children": [
-                {
-                  "type": "token",
-                  "id": "relu_note_positive",
-                  "content": "positive values stay"
-                },
-                {
-                  "type": "token",
-                  "id": "relu_note_negative",
-                  "content": "negative values become 0"
-                },
-                {
-                  "type": "token",
-                  "id": "relu_note_nonlinear",
-                  "content": "this adds nonlinearity"
-                }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "medium",
-                "direction": "horizontal",
-                "align": "center"
-              }
-            }
-          ],
-          "layout": {
-            "type": "flow",
-            "gap": "large",
-            "direction": "horizontal",
-            "align": "center"
-          }
-        },
-        {
-          "type": "connector",
-          "id": "z1_to_relu",
-          "from": "z1_value",
-          "to": "relu_1"
-        },
-        {
-          "type": "connector",
-          "id": "relu_to_h1",
-          "from": "relu_1",
-          "to": "h1_act"
-        },
-        {
-          "type": "connector",
-          "id": "z2_to_relu",
-          "from": "z2_value",
-          "to": "relu_2"
-        },
-        {
-          "type": "connector",
-          "id": "relu_to_h2",
-          "from": "relu_2",
-          "to": "h2_act"
-        }
-      ],
-      "animations": [
-        {
-          "action": "fade-in",
-          "target": "relu_title",
-          "at": "0s",
-          "duration": "1.079s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "relu_1",
-          "at": "2.467s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "draw",
-          "target": "z1_to_relu",
-          "at": "3.546s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "draw",
-          "target": "relu_to_h1",
-          "at": "5.088s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "h1_act",
-          "at": "5.705s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "h1_act",
-          "at": "7.401s",
-          "duration": "2.775s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "success"
-        },
-        {
-          "action": "fade-in",
-          "target": "z2_value",
-          "at": "11.564s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "relu_2",
-          "at": "13.26s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "draw",
-          "target": "z2_to_relu",
-          "at": "14.34s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "draw",
-          "target": "relu_to_h2",
-          "at": "15.882s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "h2_act",
-          "at": "16.498s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "h2_act",
-          "at": "18.195s",
-          "duration": "2.775s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "fade-in",
-          "target": "relu_note_row",
-          "at": "22.049s",
-          "duration": "1.234s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "relu_note_positive",
-          "at": "22.358s",
-          "duration": "0.925s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "relu_note_negative",
-          "at": "23.129s",
-          "duration": "0.925s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "relu_note_nonlinear",
-          "at": "23.9s",
-          "duration": "0.925s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "step_relu",
-          "at": "0s",
-          "duration": "27.138s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "scale",
-          "target": "step_relu",
-          "at": "0.154s",
-          "duration": "1.234s",
-          "easing": "ease-in-out",
-          "scale_factor": 1.12
-        }
-      ],
-      "auto_visible": false,
-      "include_persistent_objects": true,
-      "show_progress_bar": true
-    },
-    {
-      "id": "output_logit_scene",
-      "duration": "31.386s",
-      "layout": {
-        "type": "center",
-        "gap": "medium",
-        "direction": "horizontal",
-        "align": "center"
-      },
-      "template": "one-column",
-      "narration": "Now the hidden layer hands its features to the output neuron. This is a different neuron, so it uses its own output weights and its own output bias. The purpose of this step is to compress everything the hidden layer discovered into one score for the positive class. H one contributes strongly here, h two contributes nothing because ReLU already shut it off, and then the output bias shifts that combined score into the logit we will convert into a probability.",
-      "objects": [
-        {
-          "type": "text",
-          "id": "output_title",
-          "content": "4. Build the Output Logit",
-          "style": "heading"
-        },
-        {
-          "type": "group",
-          "id": "output_stack",
-          "visible": true,
-          "children": [
-            {
-              "type": "group",
-              "id": "output_activation_row",
-              "visible": true,
-              "children": [
-                {
-                  "type": "box",
-                  "id": "h1_act",
-                  "content": "h1 = 0.57"
-                },
-                {
-                  "type": "box",
-                  "id": "h2_act",
-                  "content": "h2 = 0.00"
-                }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "large",
-                "direction": "horizontal",
-                "align": "center"
-              }
-            },
-            {
-              "type": "group",
-              "id": "output_term_row",
-              "visible": true,
-              "children": [
-                {
-                  "type": "box",
-                  "id": "out_term_1",
-                  "content": "h1 x w_out1 = 0.57 x 1.20 = 0.684"
-                },
-                {
-                  "type": "box",
-                  "id": "out_term_2",
-                  "content": "h2 x w_out2 = 0.00 x -0.70 = 0.000"
-                }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "large",
-                "direction": "horizontal",
-                "align": "center"
-              }
-            },
-            {
-              "type": "group",
-              "id": "output_result_row",
+              "id": "clue_rows",
+              "layout": {"type": "stack", "gap": "large", "align": "center"},
               "visible": true,
               "children": [
                 {
                   "type": "group",
-                  "id": "output_merge_row",
+                  "id": "ear_path",
+                  "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
                   "visible": true,
                   "children": [
                     {
-                      "type": "box",
-                      "id": "output_partial",
-                      "content": "weighted sum = 0.684 + 0.000 = 0.684"
+                      "type": "linear_meter",
+                      "id": "ears_input",
+                      "style": "metric-coral",
+                      "size_variant": "compact",
+                      "meter_min": 0,
+                      "meter_max": 10,
+                      "meter_value": 7,
+                      "meter_left_label": "NOT SEEN",
+                      "meter_right_label": "CLEARLY SEEN",
+                      "meter_value_label": "7 / 10",
+                      "meter_caption": "FLOPPY EARS",
+                      "visible": false
+                    },
+                {
+                  "type": "group",
+                  "id": "ear_rule",
+                  "layout": {"type": "stack", "gap": "small", "align": "center"},
+                  "visible": false,
+                  "children": [
+                    {
+                      "type": "circle",
+                      "id": "ear_weight_value",
+                      "content": "× 0.50",
+                      "style": "coral",
+                      "size_variant": "hero",
+                      "visible": true
                     },
                     {
-                      "type": "box",
-                      "id": "output_bias",
-                      "content": "output bias b_out = +0.05"
+                      "type": "text",
+                      "id": "ear_weight_label",
+                      "content": "WEIGHT",
+                      "style": "annotation",
+                      "visible": true
                     }
-                  ],
-                  "layout": {
-                    "type": "flow",
-                    "gap": "large",
-                    "direction": "horizontal",
-                    "align": "center"
-                  }
+                  ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "ear_push",
+                      "content": "+0.35",
+                      "style": "metric-coral",
+                      "size_variant": "hero",
+                      "visible": false
+                    }
+                  ]
                 },
                 {
-                  "type": "box",
-                  "id": "output_total",
-                  "content": "logit = 0.684 + 0.05 = 0.734"
-                },
+                  "type": "group",
+                  "id": "snout_path",
+                  "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+                  "visible": true,
+                  "children": [
+                    {
+                      "type": "linear_meter",
+                      "id": "snout_input",
+                      "style": "metric-cyan",
+                      "size_variant": "compact",
+                      "meter_min": 0,
+                      "meter_max": 10,
+                      "meter_value": 4,
+                      "meter_left_label": "NOT SEEN",
+                      "meter_right_label": "CLEARLY SEEN",
+                      "meter_value_label": "4 / 10",
+                      "meter_caption": "LONG SNOUT",
+                      "visible": false
+                    },
                 {
-                  "type": "box",
-                  "id": "output_logit",
-                  "content": "logit = 0.734"
-                },
-                {
-                  "type": "token",
-                  "id": "output_note",
-                  "content": "the output neuron has its own weights and bias"
+                  "type": "group",
+                  "id": "snout_rule",
+                  "layout": {"type": "stack", "gap": "small", "align": "center"},
+                  "visible": false,
+                  "children": [
+                    {
+                      "type": "circle",
+                      "id": "snout_weight_value",
+                      "content": "× 0.55",
+                      "style": "cyan",
+                      "size_variant": "hero",
+                      "visible": true
+                    },
+                    {
+                      "type": "text",
+                      "id": "snout_weight_label",
+                      "content": "WEIGHT",
+                      "style": "annotation",
+                      "visible": true
+                    }
+                  ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "snout_push",
+                      "content": "+0.22",
+                      "style": "metric-cyan",
+                      "size_variant": "hero",
+                      "visible": false
+                    }
+                  ]
                 }
-              ],
-              "layout": {
-                "type": "stack",
-                "gap": "large",
-                "direction": "vertical",
-                "align": "center"
-              }
+              ]
             }
-          ],
-          "layout": {
-            "type": "stack",
-            "gap": "large",
-            "direction": "vertical",
-            "align": "center"
-          }
+          ]
         },
         {
           "type": "connector",
-          "id": "h1_to_out_term_1",
-          "from": "h1_act",
-          "to": "out_term_1"
+          "id": "pet_to_ears",
+          "from": "hero_pet",
+          "to": "ears_input",
+          "style": "coral",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         },
         {
           "type": "connector",
-          "id": "h2_to_out_term_2",
-          "from": "h2_act",
-          "to": "out_term_2"
+          "id": "ears_to_rule",
+          "from": "ears_input",
+          "to": "ear_rule",
+          "style": "coral",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         },
         {
           "type": "connector",
-          "id": "out_term_1_to_partial",
-          "from": "out_term_1",
-          "to": "output_partial"
+          "id": "ear_rule_to_push",
+          "from": "ear_rule",
+          "to": "ear_push",
+          "style": "coral",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         },
         {
           "type": "connector",
-          "id": "out_term_2_to_partial",
-          "from": "out_term_2",
-          "to": "output_partial"
+          "id": "pet_to_snout",
+          "from": "hero_pet",
+          "to": "snout_input",
+          "style": "cyan",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         },
         {
           "type": "connector",
-          "id": "partial_to_output_total",
-          "from": "output_partial",
-          "to": "output_total"
+          "id": "snout_to_rule",
+          "from": "snout_input",
+          "to": "snout_rule",
+          "style": "cyan",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         },
         {
           "type": "connector",
-          "id": "bias_to_output_total",
-          "from": "output_bias",
-          "to": "output_total"
-        },
-        {
-          "type": "connector",
-          "id": "output_total_to_logit",
-          "from": "output_total",
-          "to": "output_logit"
+          "id": "snout_rule_to_push",
+          "from": "snout_rule",
+          "to": "snout_push",
+          "style": "cyan",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         }
       ],
       "animations": [
         {
-          "action": "fade-in",
-          "target": "output_title",
-          "at": "0s",
-          "duration": "1.099s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "h1_act",
-          "at": "1.569s",
-          "duration": "2.511s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "success"
-        },
-        {
+          "id": "draw_pet_to_ears",
           "action": "draw",
-          "target": "h1_to_out_term_1",
-          "at": "4.237s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
+          "target": "pet_to_ears",
+          "at": "3.5s",
+          "cue": "ears look quite floppy",
+          "duration": "0.9s"
         },
         {
+          "id": "flow_pet_to_ears",
+          "action": "flow",
+          "target": "pet_to_ears",
+          "after": "draw_pet_to_ears",
+          "duration": "1.2s"
+        },
+        {
+          "id": "reveal_ears_input",
           "action": "fade-in",
-          "target": "out_term_1",
-          "at": "4.708s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
+          "target": "ears_input",
+          "after": "flow_pet_to_ears",
+          "duration": "0.8s"
         },
         {
-          "action": "highlight",
-          "target": "h2_act",
-          "at": "7.847s",
-          "duration": "2.511s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
+          "id": "reveal_ear_rule",
+          "action": "fade-in",
+          "target": "ear_rule",
+          "at": "10s",
+          "cue": "ear weight",
+          "duration": "0.8s"
         },
         {
+          "id": "draw_ears_to_rule",
           "action": "draw",
-          "target": "h2_to_out_term_2",
-          "at": "10.514s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
+          "target": "ears_to_rule",
+          "after": "reveal_ear_rule",
+          "duration": "0.8s"
         },
         {
-          "action": "fade-in",
-          "target": "out_term_2",
-          "at": "10.985s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
+          "id": "flow_ears_to_rule",
+          "action": "flow",
+          "target": "ears_to_rule",
+          "after": "draw_ears_to_rule",
+          "duration": "1s"
         },
         {
+          "id": "draw_ear_rule_to_push",
           "action": "draw",
-          "target": "out_term_1_to_partial",
-          "at": "14.124s",
-          "duration": "1.412s",
-          "easing": "ease-in-out"
+          "target": "ear_rule_to_push",
+          "after": "flow_ears_to_rule",
+          "duration": "0.8s"
         },
         {
+          "id": "flow_ear_rule_to_push",
+          "action": "flow",
+          "target": "ear_rule_to_push",
+          "after": "draw_ear_rule_to_push",
+          "duration": "1s"
+        },
+        {
+          "id": "reveal_ear_push",
+          "action": "fade-in",
+          "target": "ear_push",
+          "after": "flow_ear_rule_to_push",
+          "duration": "0.8s"
+        },
+        {
+          "id": "draw_pet_to_snout",
           "action": "draw",
-          "target": "out_term_2_to_partial",
-          "at": "14.908s",
-          "duration": "1.412s",
-          "easing": "ease-in-out"
+          "target": "pet_to_snout",
+          "at": "19s",
+          "cue": "snout works the same way",
+          "duration": "0.9s"
         },
         {
+          "id": "flow_pet_to_snout",
+          "action": "flow",
+          "target": "pet_to_snout",
+          "after": "draw_pet_to_snout",
+          "duration": "1.2s"
+        },
+        {
+          "id": "reveal_snout_input",
           "action": "fade-in",
-          "target": "output_partial",
-          "at": "15.85s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
+          "target": "snout_input",
+          "after": "flow_pet_to_snout",
+          "duration": "0.8s"
         },
         {
-          "action": "highlight",
-          "target": "output_partial",
-          "at": "17.733s",
-          "duration": "2.511s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
+          "id": "reveal_snout_rule",
           "action": "fade-in",
-          "target": "output_bias",
-          "at": "20.401s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
+          "target": "snout_rule",
+          "at": "25s",
+          "cue": "its weight",
+          "duration": "0.8s"
         },
         {
+          "id": "draw_snout_to_rule",
           "action": "draw",
-          "target": "partial_to_output_total",
-          "at": "22.284s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
+          "target": "snout_to_rule",
+          "after": "reveal_snout_rule",
+          "duration": "0.8s"
         },
         {
+          "id": "flow_snout_to_rule",
+          "action": "flow",
+          "target": "snout_to_rule",
+          "after": "draw_snout_to_rule",
+          "duration": "1s"
+        },
+        {
+          "id": "draw_snout_rule_to_push",
           "action": "draw",
-          "target": "bias_to_output_total",
-          "at": "23.069s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
+          "target": "snout_rule_to_push",
+          "after": "flow_snout_to_rule",
+          "duration": "0.8s"
         },
         {
+          "id": "flow_snout_rule_to_push",
+          "action": "flow",
+          "target": "snout_rule_to_push",
+          "after": "draw_snout_rule_to_push",
+          "duration": "1s"
+        },
+        {
+          "id": "reveal_snout_push",
           "action": "fade-in",
-          "target": "output_total",
-          "at": "23.853s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "draw",
-          "target": "output_total_to_logit",
-          "at": "25.894s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "output_logit",
-          "at": "26.521s",
-          "duration": "1.255s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "output_logit",
-          "at": "28.247s",
-          "duration": "1.883s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "success"
-        },
-        {
-          "action": "fade-in",
-          "target": "output_note",
-          "at": "29.032s",
-          "duration": "1.099s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "step_output",
-          "at": "0s",
-          "duration": "29.189s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "scale",
-          "target": "step_output",
-          "at": "0.157s",
-          "duration": "1.255s",
-          "easing": "ease-in-out",
-          "scale_factor": 1.12
+          "target": "snout_push",
+          "after": "flow_snout_rule_to_push",
+          "duration": "0.8s"
         }
-      ],
-      "auto_visible": false,
-      "include_persistent_objects": true,
-      "show_progress_bar": true
+      ]
     },
     {
-      "id": "prediction",
-      "duration": "29.575s",
-      "layout": {
-        "type": "center",
-        "gap": "medium",
-        "direction": "horizontal",
-        "align": "center"
-      },
-      "template": "one-column",
-      "narration": "A logit is useful for the model, but it is not yet a probability that we can interpret comfortably. The sigmoid fixes that by mapping any real-valued score onto the range from zero to one. A bigger positive logit would push us closer to one, a negative logit would push us toward zero, and this particular score lands at about zero point six seven six. So the network is leaning toward the positive class with moderate confidence.",
+      "id": "one_lean",
+      "duration": "26s",
+      "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "Now we have two pushes, one from each clue. But the model needs one answer, not two. So it puts both pushes on the same dog-or-cat scale. Zero point three five plus zero point two two gives us one internal lean: zero point five seven toward dog. This matters because the model needs one score it can turn into a final answer.",
       "objects": [
         {
-          "type": "text",
-          "id": "prediction_title",
-          "content": "5. Turn the Logit into a Prediction",
-          "style": "heading"
-        },
-        {
           "type": "group",
-          "id": "prediction_stack",
+          "id": "lean_world",
+          "grid": {"row": 1, "col": 1},
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
           "visible": true,
           "children": [
             {
-              "type": "group",
-              "id": "activation_row",
-              "visible": true,
-              "children": [
-                {
-                  "type": "box",
-                  "id": "output_logit",
-                  "content": "logit = 0.734"
-                },
-                {
-                  "type": "box",
-                  "id": "sigmoid_box",
-                  "content": "sigmoid(0.734)"
-                },
-                {
-                  "type": "box",
-                  "id": "prediction_box",
-                  "content": "y_hat = 0.676"
-                }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "large",
-                "direction": "horizontal",
-                "align": "center"
-              }
+              "type": "pet_portrait",
+              "id": "hero_pet",
+              "actor_id": "hero_pet",
+              "continuity_mode": "position_only",
+              "pet_kind": "mystery",
+              "style": "gold",
+              "size_variant": "hero",
+              "visible": true
             },
             {
               "type": "group",
-              "id": "recap_row",
+              "id": "pushes",
+              "layout": {"type": "stack", "gap": "medium", "align": "center"},
               "visible": true,
               "children": [
                 {
-                  "type": "token",
-                  "id": "recap_input",
-                  "content": "x = [0.70, -0.40]"
+                  "type": "text",
+                  "id": "ear_push",
+                  "content": "+0.35",
+                  "style": "metric-coral",
+                  "size_variant": "hero",
+                  "visible": true
                 },
                 {
-                  "type": "token",
-                  "id": "recap_h1",
-                  "content": "h1 = 0.57"
-                },
-                {
-                  "type": "token",
-                  "id": "recap_h2",
-                  "content": "h2 = 0.00"
-                },
-                {
-                  "type": "token",
-                  "id": "recap_y",
-                  "content": "y_hat = 0.676"
+                  "type": "text",
+                  "id": "snout_push",
+                  "content": "+0.22",
+                  "style": "metric-cyan",
+                  "size_variant": "hero",
+                  "visible": true
                 }
-              ],
-              "layout": {
-                "type": "flow",
-                "gap": "medium",
-                "direction": "horizontal",
-                "align": "center"
-              }
+              ]
             },
             {
-              "type": "token",
-              "id": "prediction_note",
-              "content": "sigmoid maps an unbounded score into 0 to 1"
+              "type": "linear_meter",
+              "id": "combined_lean",
+              "style": "metric-gold",
+              "size_variant": "hero",
+              "meter_min": -1,
+              "meter_max": 1,
+              "meter_value": 0.57,
+              "meter_left_label": "CATWARD",
+              "meter_center_label": "EVEN",
+              "meter_right_label": "DOGWARD",
+              "meter_value_label": "+0.57",
+              "meter_caption": "ONE SHARED LEAN",
+              "visible": false
             }
-          ],
-          "layout": {
-            "type": "stack",
-            "gap": "large",
-            "direction": "vertical",
-            "align": "center"
-          }
+          ]
         },
         {
           "type": "connector",
-          "id": "logit_to_sigmoid",
-          "from": "output_logit",
-          "to": "sigmoid_box"
+          "id": "ear_push_to_lean",
+          "from": "ear_push",
+          "to": "combined_lean",
+          "style": "coral",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         },
         {
           "type": "connector",
-          "id": "sigmoid_to_prediction",
-          "from": "sigmoid_box",
-          "to": "prediction_box"
+          "id": "snout_push_to_lean",
+          "from": "snout_push",
+          "to": "combined_lean",
+          "style": "cyan",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         }
       ],
       "animations": [
         {
-          "action": "fade-in",
-          "target": "prediction_title",
-          "at": "0s",
-          "duration": "1.294s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "output_logit",
-          "at": "1.848s",
-          "duration": "1.479s",
-          "easing": "ease-in-out"
-        },
-        {
+          "id": "draw_ear_push_to_lean",
           "action": "draw",
-          "target": "logit_to_sigmoid",
-          "at": "5.915s",
-          "duration": "1.479s",
-          "easing": "ease-in-out"
+          "target": "ear_push_to_lean",
+          "at": "4s",
+          "cue": "same dog-or-cat scale",
+          "duration": "0.9s"
         },
         {
-          "action": "fade-in",
-          "target": "sigmoid_box",
-          "at": "6.47s",
-          "duration": "1.479s",
-          "easing": "ease-in-out"
+          "id": "flow_ear_push_to_lean",
+          "action": "flow",
+          "target": "ear_push_to_lean",
+          "after": "draw_ear_push_to_lean",
+          "duration": "1.2s"
         },
         {
+          "id": "draw_snout_push_to_lean",
           "action": "draw",
-          "target": "sigmoid_to_prediction",
-          "at": "11.091s",
-          "duration": "1.479s",
-          "easing": "ease-in-out"
+          "target": "snout_push_to_lean",
+          "after": "flow_ear_push_to_lean",
+          "duration": "0.9s"
         },
         {
+          "id": "flow_snout_push_to_lean",
+          "action": "flow",
+          "target": "snout_push_to_lean",
+          "after": "draw_snout_push_to_lean",
+          "duration": "1.2s"
+        },
+        {
+          "id": "reveal_combined_lean",
           "action": "fade-in",
-          "target": "prediction_box",
-          "at": "11.83s",
-          "duration": "1.479s",
-          "easing": "ease-in-out"
+          "target": "combined_lean",
+          "after": "flow_snout_push_to_lean",
+          "duration": "1s"
+        }
+      ]
+    },
+    {
+      "id": "friendlier_scale",
+      "duration": "40s",
+      "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small"},
+      "auto_visible": false,
+      "show_progress_bar": false,
+      "narration": "Zero point five seven does not mean fifty-seven percent. It is an internal score, not a probability. The model passes that score through a function called a sigmoid. Its S-shaped curve puts a score of zero in the middle at fifty percent. Positive scores move up the curve; negative scores move down. A score of zero point five seven lands at about sixty-four percent. This change of scale matters because a percentage is easier to interpret. The evidence has not changed; only the scale has.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "translation_world",
+          "grid": {"row": 1, "col": 1},
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "large", "align": "center"},
+          "visible": true,
+          "children": [
+            {
+              "type": "pet_portrait",
+              "id": "hero_pet",
+              "actor_id": "hero_pet",
+              "continuity_mode": "position_only",
+              "pet_kind": "mystery",
+              "style": "gold",
+              "size_variant": "hero",
+              "visible": true
+            },
+            {
+              "type": "linear_meter",
+              "id": "lean_scale",
+              "style": "metric-gold",
+              "size_variant": "compact",
+              "meter_min": -1,
+              "meter_max": 1,
+              "meter_value": 0.57,
+              "meter_left_label": "CATWARD",
+              "meter_center_label": "EVEN",
+              "meter_right_label": "DOGWARD",
+              "meter_value_label": "+0.57",
+              "meter_caption": "INTERNAL LEAN",
+              "visible": true
+            },
+            {
+              "type": "sigmoid_plot",
+              "id": "sigmoid_curve",
+              "style": "metric-gold",
+              "size_variant": "default",
+              "sigmoid_input": 0.57,
+              "sigmoid_input_label": "+0.57",
+              "sigmoid_output_label": "64%",
+              "sigmoid_caption": "SIGMOID",
+              "visible": false
+            },
+            {
+              "type": "group",
+              "id": "chance_output",
+              "layout": {"type": "stack", "gap": "small", "align": "center"},
+              "visible": false,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "chance_value",
+                  "content": "64%",
+                  "style": "metric-gold",
+                  "size_variant": "hero"
+                },
+                {
+                  "type": "text",
+                  "id": "chance_label",
+                  "content": "DOG",
+                  "style": "annotation"
+                }
+              ]
+            }
+          ]
         },
         {
-          "action": "highlight",
-          "target": "prediction_box",
-          "at": "14.233s",
-          "duration": "3.697s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "success"
+          "type": "connector",
+          "id": "lean_to_sigmoid",
+          "from": "lean_scale",
+          "to": "sigmoid_curve",
+          "style": "gold",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         },
         {
-          "action": "fade-in",
-          "target": "prediction_note",
-          "at": "18.484s",
-          "duration": "1.294s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "recap_input",
-          "at": "21.442s",
-          "duration": "1.109s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "recap_h1",
-          "at": "22.366s",
-          "duration": "1.109s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "recap_h2",
-          "at": "23.29s",
-          "duration": "1.109s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "fade-in",
-          "target": "recap_y",
-          "at": "24.214s",
-          "duration": "1.109s",
-          "easing": "ease-in-out"
-        },
-        {
-          "action": "highlight",
-          "target": "recap_y",
-          "at": "25.508s",
-          "duration": "2.957s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "highlight",
-          "target": "step_predict",
-          "at": "0s",
-          "duration": "26.987s",
-          "easing": "ease-in-out",
-          "style": "glow",
-          "color": "accent"
-        },
-        {
-          "action": "scale",
-          "target": "step_predict",
-          "at": "0.185s",
-          "duration": "1.479s",
-          "easing": "ease-in-out",
-          "scale_factor": 1.12
+          "type": "connector",
+          "id": "sigmoid_to_chance",
+          "from": "sigmoid_curve",
+          "to": "chance_output",
+          "style": "gold",
+          "grid": {"row": 1, "col": 1},
+          "visible": false
         }
       ],
+      "animations": [
+        {
+          "id": "draw_lean_to_sigmoid",
+          "action": "draw",
+          "target": "lean_to_sigmoid",
+          "at": "8s",
+          "cue": "passes that score",
+          "duration": "0.8s"
+        },
+        {
+          "id": "flow_lean_to_sigmoid",
+          "action": "flow",
+          "target": "lean_to_sigmoid",
+          "after": "draw_lean_to_sigmoid",
+          "duration": "1.2s"
+        },
+        {
+          "id": "draw_sigmoid_curve",
+          "action": "draw",
+          "target": "sigmoid_curve",
+          "at": "15s",
+          "cue": "S-shaped curve",
+          "duration": "1.8s"
+        },
+        {
+          "id": "draw_sigmoid_to_chance",
+          "action": "draw",
+          "target": "sigmoid_to_chance",
+          "at": "29s",
+          "cue": "lands at about sixty-four percent",
+          "duration": "0.8s"
+        },
+        {
+          "id": "flow_sigmoid_to_chance",
+          "action": "flow",
+          "target": "sigmoid_to_chance",
+          "after": "draw_sigmoid_to_chance",
+          "duration": "1.2s"
+        },
+        {
+          "id": "reveal_chance_output",
+          "action": "fade-in",
+          "target": "chance_output",
+          "after": "flow_sigmoid_to_chance",
+          "duration": "1s"
+        }
+      ]
+    },
+    {
+      "id": "predict_the_change",
+      "duration": "35s",
+      "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small"},
       "auto_visible": false,
-      "include_persistent_objects": true,
-      "show_progress_bar": true,
-      "transition": {
-        "type": "fade",
-        "duration": "0.924s"
-      }
+      "show_progress_bar": false,
+      "narration": "Imagine the same animal, but now the ears are much less floppy. What do you think should happen? The ear weight stays the same, because the model learned it earlier. But the ear clue is weaker, so its push gets smaller. That moves the combined lean back toward even, and the dog chance drops from sixty-four percent to about fifty-eight percent. That entire path, from a new input to a prediction, is called forward propagation.",
+      "objects": [
+        {
+          "type": "group",
+          "id": "counterfactual_world",
+          "grid": {"row": 1, "col": 1},
+          "layout": {"type": "flow", "direction": "horizontal", "gap": "medium", "align": "center"},
+          "visible": true,
+          "children": [
+            {
+              "type": "pet_portrait",
+              "id": "hero_pet",
+              "actor_id": "hero_pet",
+              "continuity_mode": "position_only",
+              "pet_kind": "mystery",
+              "pet_highlights": ["ears"],
+              "show_feature_labels": false,
+              "style": "gold",
+              "size_variant": "hero",
+              "visible": true
+            },
+            {
+              "type": "group",
+              "id": "ear_change",
+              "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small"},
+              "visible": true,
+              "children": [
+                {
+                  "type": "linear_meter",
+                  "id": "ears_strong",
+                  "grid": {"row": 1, "col": 1},
+                  "style": "metric-coral",
+                  "size_variant": "compact",
+                  "meter_min": 0,
+                  "meter_max": 10,
+                  "meter_value": 7,
+                  "meter_left_label": "NOT SEEN",
+                  "meter_right_label": "CLEARLY SEEN",
+                  "meter_value_label": "7 / 10",
+                  "meter_caption": "FLOPPY EARS",
+                  "visible": true
+                },
+                {
+                  "type": "linear_meter",
+                  "id": "ears_weak",
+                  "grid": {"row": 1, "col": 1},
+                  "style": "metric-coral",
+                  "size_variant": "compact",
+                  "meter_min": 0,
+                  "meter_max": 10,
+                  "meter_value": 2,
+                  "meter_left_label": "NOT SEEN",
+                  "meter_right_label": "CLEARLY SEEN",
+                  "meter_value_label": "2 / 10",
+                  "meter_caption": "FLOPPY EARS",
+                  "visible": false
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "id": "fixed_ear_rule",
+              "layout": {"type": "stack", "gap": "small", "align": "center"},
+              "visible": true,
+              "children": [
+                {
+                  "type": "circle",
+                  "id": "fixed_ear_weight_value",
+                  "content": "× 0.50",
+                  "style": "coral",
+                  "size_variant": "hero",
+                  "visible": true
+                },
+                {
+                  "type": "text",
+                  "id": "fixed_ear_weight_label",
+                  "content": "WEIGHT",
+                  "style": "annotation",
+                  "visible": true
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "id": "lean_change",
+              "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small"},
+              "visible": true,
+              "children": [
+                {
+                  "type": "linear_meter",
+                  "id": "lean_before",
+                  "grid": {"row": 1, "col": 1},
+                  "style": "metric-gold",
+                  "size_variant": "compact",
+                  "meter_min": -1,
+                  "meter_max": 1,
+                  "meter_value": 0.57,
+                  "meter_left_label": "CATWARD",
+                  "meter_center_label": "EVEN",
+                  "meter_right_label": "DOGWARD",
+                  "meter_value_label": "+0.57",
+                  "meter_caption": "LEAN",
+                  "visible": true
+                },
+                {
+                  "type": "linear_meter",
+                  "id": "lean_after",
+                  "grid": {"row": 1, "col": 1},
+                  "style": "metric-gold",
+                  "size_variant": "compact",
+                  "meter_min": -1,
+                  "meter_max": 1,
+                  "meter_value": 0.32,
+                  "meter_left_label": "CATWARD",
+                  "meter_center_label": "EVEN",
+                  "meter_right_label": "DOGWARD",
+                  "meter_value_label": "+0.32",
+                  "meter_caption": "LEAN",
+                  "visible": false
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "id": "chance_change",
+              "layout": {"type": "stack", "gap": "small", "align": "center"},
+              "visible": true,
+              "children": [
+                {
+                  "type": "group",
+                  "id": "chance_value_swap",
+                  "layout": {"type": "grid", "columns": 1, "rows": 1, "gap": "small"},
+                  "visible": true,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "chance_before",
+                      "content": "64%",
+                      "style": "metric-gold",
+                      "size_variant": "hero",
+                      "grid": {"row": 1, "col": 1},
+                      "visible": true
+                    },
+                    {
+                      "type": "text",
+                      "id": "chance_after",
+                      "content": "58%",
+                      "style": "metric-gold",
+                      "size_variant": "hero",
+                      "grid": {"row": 1, "col": 1},
+                      "visible": false
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "chance_label",
+                  "content": "DOG",
+                  "style": "annotation",
+                  "visible": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "connector",
+          "id": "counter_ear_to_rule",
+          "from": "ears_strong",
+          "to": "fixed_ear_rule",
+          "style": "coral",
+          "grid": {"row": 1, "col": 1},
+          "visible": true
+        },
+        {
+          "type": "connector",
+          "id": "counter_rule_to_lean",
+          "from": "fixed_ear_rule",
+          "to": "lean_before",
+          "style": "gold",
+          "grid": {"row": 1, "col": 1},
+          "visible": true
+        },
+        {
+          "type": "connector",
+          "id": "counter_lean_to_chance",
+          "from": "lean_before",
+          "to": "chance_change",
+          "style": "gold",
+          "grid": {"row": 1, "col": 1},
+          "visible": true
+        },
+        {
+          "type": "text",
+          "id": "technical_name",
+          "content": "FORWARD PROPAGATION",
+          "style": "annotation",
+          "position": "bottom",
+          "visible": false
+        }
+      ],
+      "animations": [
+        {
+          "id": "replace_ears",
+          "action": "replace",
+          "target": "ears_strong",
+          "with": "ears_weak",
+          "at": "6s",
+          "cue": "much less floppy",
+          "duration": "1.2s"
+        },
+        {
+          "id": "replace_lean",
+          "action": "replace",
+          "target": "lean_before",
+          "with": "lean_after",
+          "at": "16s",
+          "cue": "combined lean back toward even",
+          "duration": "1.2s"
+        },
+        {
+          "id": "fade_out_old_chance",
+          "action": "fade-out",
+          "target": "chance_before",
+          "at": "19s",
+          "cue": "dog chance drops",
+          "duration": "0.6s"
+        },
+        {
+          "id": "fade_in_new_chance",
+          "action": "fade-in",
+          "target": "chance_after",
+          "after": "fade_out_old_chance",
+          "duration": "0.8s"
+        },
+        {
+          "id": "reveal_technical_name",
+          "action": "fade-in",
+          "target": "technical_name",
+          "at": "23s",
+          "cue": "forward propagation",
+          "duration": "0.8s"
+        }
+      ]
     }
   ]
 }

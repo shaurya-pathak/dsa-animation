@@ -171,36 +171,42 @@ class KaivraMCPServer:
             },
             "instructions": (
                 f'Kaivra DSL v{CURRENT_DSL_VERSION}. Always set "version": "{CURRENT_DSL_VERSION}". '
-                "Workflow: plan_animation → write JSON directly → check_animation → preview_animation → render_animation. "
+                "Workflow: plan_animation → create and read <slug>.story.md → write JSON → check_animation → preview_animation → render_animation. "
                 "Start with plan_animation when user preferences are still missing. If the user already gave enough direction, "
-                "assume the draft defaults and start writing the JSON immediately. "
-                "After planning, write the animation JSON directly — do NOT use a scaffold. "
-                "Read MCP example resources like kaivra://example/perspectiv_medcase_process_explainer, "
-                "kaivra://example/api_how_it_works, or kaivra://example/forward_propagation "
-                "(or the matching files under examples/reference/) for the quality bar. If your client only shows "
-                "resource descriptors first, call resources/read on those example URIs to fetch the actual JSON body. "
-                "Default narrated explainers to the process_explainer pattern: start with why it matters, then show the state flow, then close with the outcome. "
-                "Wrap objects in group containers with flow (horizontal) or stack (vertical) layouts — flat lists cause overlaps. "
-                "Prefer template: one-column on scenes. If you skip template, default scene-level layout.type to 'stack'. "
+                "assume the draft defaults but still create and review the story contract before writing JSON. "
+                "For every layperson explainer, read kaivra://story-contract, translate the user's intention, examples, and constraints "
+                "into the paired Markdown contract, and set meta.story_contract to its filename. Start with the learner's before-and-after transformation, one familiar mental model, "
+                "the earlier-training versus current-prediction boundary, and a misconception map. Do not copy a reference example's numbers, claims, or scene sequence directly into DSL. "
+                "Use create_story_contract to write the sidecar; file-backed layperson checks, previews, and renders block until it is complete. "
+                "Teach everyday action and visible causal change before technical vocabulary or formal notation, then place the correct technical name beside the actor it names. A learned multiplier is a weight; bias is a separate added baseline. When a named function's shape teaches the mapping, show it: use sigmoid_plot for score-to-probability instead of an opaque converter box. Require sound-off, teach-back, counterfactual, and scale-change review evidence; "
+                "correct labels or arithmetic do not make a layperson explainer releasable on their own. "
+                "Reference examples are syntax demonstrations, never visual quality bars or composition templates. "
+                "Agree on one story question and a choreography path before authoring. One creative director must own the complete timeline; specialists review it, but do not independently compose isolated scenes. "
+                "If the approved concept needs a missing reusable visualization primitive, read kaivra://capability-escalation, keep the creative approval intact, and record a capability request through plan_animation and the story contract. "
+                "Creative approval is separate from implementation readiness. The host orchestrator—not Kaivra—assigns one bounded implementation agent per missing reusable primitive, supplies its exact acceptance tests and context, then integrates and reviews the result. "
+                "Do not author JSON that depends on the missing primitive until it is implemented, or an explicitly accepted fallback and product risk are recorded. "
+                "Default concept-led explainers to pattern: motion_explainer. Treat a theme as palette and typography only. Derive the spatial metaphor, framing, and motion language from the subject. "
+                "Scene boundaries are render and edit segments inside one evolving visual world, not new slides. A repeated heading-stage-footer composition, a row of labelled cards, or a new static diagram per beat is a blocked draft. "
+                "Do not begin from editorial, storyboard, one-column, or two-column templates for a narrated explainer. Build a custom scene or group layout around the causal actors. Use large direct-on-canvas values only when they are actors in the transformation. Keep screen copy to fragments, values, and symbols; let narration carry full sentences. "
+                "Wrap related actors in groups only to control their spatial relationship; do not use boxes or panels as automatic containers. "
                 "Keep connected nodes adjacent within groups so connectors don't cross unrelated nodes. "
                 "Available layout types: center, grid, flow, stack, split, carousel. "
-                "Use fade-in for reveals, draw for connectors. "
-                "Prefer persistent document-level objects whenever labels, chapter rails, or shared state carry across scenes. "
+                "Use move-to, replace, draw, flow, and scale as explanatory verbs. Fade-in is only for a true entrance; it is not the main teaching action. "
+                "Do not use pulse, glow, bounce, or idle motion as decoration. Emphasis must come from composition, timing, and a visible state change. "
+                "Persist causal actors and values, not labels, chapter rails, sidebars, legends, or navigation chrome. "
                 "Reuse the same object id and content across consecutive scenes for smooth continuity morphs. "
-                "Add a carousel chapter tracker as a persistent document-level object and highlight the active step each scene. "
-                "Template vs layout: 'template' is a high-level scene preset ('one-column' or 'two-column') that sets default layout and regions. "
-                "'layout' on a scene or group is the algorithmic arrangement (center, grid, flow, stack, etc.). "
-                "Prefer template for simple scene framing. Add explicit scene-level layout only when you need to override the template defaults or when no template is set. "
+                "Add chapter navigation only when the viewer would otherwise lose their place. "
+                "Template vs layout: templates remain available for legacy documents and intentionally document-like material. New narrated explainers should use explicit scene/group layouts so composition follows the subject instead of a preset frame. "
                 "Connector overlap: connectors route as straight lines between anchors. To avoid crossings, "
                 "order objects in the group so that connected nodes are adjacent — the engine does not auto-route around obstacles. "
                 "If a connector must span non-adjacent nodes, split into a separate group or use an intermediate waypoint node. "
-                "Write narration as conversational spoken English. Prefer user-facing concepts and plain-English process language over filenames, module names, repo paths, or component inventories unless the user explicitly asks for implementation detail. "
-                "Narration sync: the engine matches spoken words to animation targets by content and ID. "
+                "Write narration as conversational spoken English that adds interpretation instead of reading the screen. Speak directly about the subject; keep production reasoning out of the output. Never announce 'I'm going to show you', 'we'll walk through', 'let's slow this down', 'we're about to see', or 'first I'll explain'. Shared assumptions such as 'let's assume' and genuine questions may use 'we' when they actively involve the learner. Read it aloud; avoid 'Welcome', 'In this video', and documentation-style prose. Reject generic editorial slogans such as 'ONE INPUT · ONE ANSWER' and meta labels such as 'TECHNICAL NAME' or 'KEY TAKEAWAY'; screen copy must name a real concept, value, or state. "
+                "Keep authored scene duration and at values as readable silent-render fallbacks. For voice, synthesize first and fit each scene to measured audio plus the configured lead and hold; never guess voice duration from word count. Aim for about one second of combined tail and lead-in between adjacent narrated movements; silence longer than two seconds needs a deliberate prediction, comparison, or teach-back job. "
+                "Narration sync: use an explicit cue phrase plus an authored at fallback for each spoken visual beat. The engine case-folds and removes punctuation, then matches the full cue as contiguous words. "
                 "Use the same words in narration that appear on screen — e.g., if an object has content 'Server', "
                 "say 'the server boots' in narration so the reveal lands on that word. "
                 "For tricky names, add object.spoken_forms aliases such as ['co pilot', 'cobalt']. "
-                "ElevenLabs renders get precise word-level alignment; OpenAI and local (Sherpa) keep scene-level timing "
-                "with the same keyword-overlap guidance, and local also adds a short narration lead-in."
+                "ElevenLabs can provide native word timing; OpenAI, local Sherpa, and local Qwen receive deterministic estimated word timing when native cues are absent. The same cue contract applies to every provider, and local providers also add a short narration lead-in."
             ),
         }
 
@@ -278,8 +284,14 @@ def _build_tools() -> list[ToolDefinition]:
                     },
                     "base_theme": {
                         "type": "string",
-                        "enum": ["material", "whiteboard", "modern"],
-                        "description": "Built-in theme to start from. Defaults to 'modern'.",
+                        "enum": [
+                            "editorial",
+                            "material",
+                            "whiteboard",
+                            "modern",
+                            "storyboard_dark",
+                        ],
+                        "description": "Built-in theme to start from. Defaults to 'editorial'.",
                     },
                     "overrides": {
                         "type": "object",
@@ -310,11 +322,51 @@ def _build_tools() -> list[ToolDefinition]:
         ToolDefinition(
             name="plan_animation",
             title="Plan Animation",
-            description="Interactive planning step — returns a structured questionnaire, draft defaults, a starter outline, and embedded example excerpts before creating an animation. Use it when user preferences are still missing; if the request is already specific enough, assume the defaults and start authoring immediately. Default narrated explainers to process_explainer unless the user clearly wants another pattern. Ask about voice mode (OpenAI, ElevenLabs, local, captions only), detail level, audience, visual theme, and structure. Write narration in clear spoken English, favor user-facing concepts over implementation inventory, and if voice is enabled remind the user to mirror on-screen keywords and use spoken_forms aliases for tricky pronunciations before authoring the JSON directly.",
+            description="Story-and-choreography planning step — returns a story contract path/template, motion-first draft defaults, a continuous beat outline, review briefs for timeline segments, and capability escalation requests for missing reusable visualization primitives. A creative director can approve the concept while implementation readiness is pending; the host orchestrator (not Kaivra) assigns one bounded implementation agent per primitive, supplies exact acceptance tests/context, and integrates/reviews it. JSON authoring waits for implementation or an explicitly accepted fallback with product risk. Translate user intent into one evolving visual world before authoring layperson JSON. One creative director owns the complete timeline; specialists review rather than independently composing scenes. Default concept-led explainers to motion_explainer, derive composition from the subject, and treat themes as palette only. Write narration for the ear and anchor spoken visual changes with explicit cue phrases plus authored timing fallbacks.",
             input_schema={
                 "type": "object",
                 "properties": {
                     "topic": {"type": "string"},
+                    "capability_requests": {
+                        "type": "array",
+                        "description": "Missing reusable visualization primitives needed by an approved creative concept. These are recorded for the host orchestrator; Kaivra does not spawn agents.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "requested_primitive": {"type": "string"},
+                                "creative_intent": {"type": "string"},
+                                "story_moment": {"type": "string"},
+                                "reusable_scope": {"type": "string"},
+                                "visual_behavior": {"type": "string"},
+                                "acceptance_tests": {"type": "array", "items": {"type": "string"}},
+                                "implementation_context": {"type": "string"},
+                                "fallback": {"type": "string"},
+                                "product_risk": {"type": "string"},
+                                "authorization": {
+                                    "type": "string",
+                                    "enum": ["authorized", "not authorized"],
+                                },
+                                "resolution_status": {
+                                    "type": "string",
+                                    "enum": ["pending", "implemented", "fallback accepted"],
+                                },
+                            },
+                            "required": [
+                                "requested_primitive",
+                                "creative_intent",
+                                "story_moment",
+                                "reusable_scope",
+                                "visual_behavior",
+                                "acceptance_tests",
+                                "implementation_context",
+                                "fallback",
+                                "product_risk",
+                                "authorization",
+                            ],
+                            "additionalProperties": False,
+                        },
+                    },
                 },
                 "additionalProperties": False,
             },
@@ -328,9 +380,39 @@ def _build_tools() -> list[ToolDefinition]:
             handler=_plan_tool,
         ),
         ToolDefinition(
+            name="create_story_contract",
+            title="Create Story Contract",
+            description="Create or update the paired <slug>.story.md contract before authoring a layperson explainer. With no markdown it writes the required template; complete and review every section before previewing or rendering.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "animation_path": {
+                        "type": "string",
+                        "description": "Planned animation JSON/YAML path; the sidecar is written beside it.",
+                    },
+                    "markdown": {
+                        "type": "string",
+                        "description": (
+                            "Reviewed story-contract Markdown. Omit it to create the required template."
+                        ),
+                    },
+                },
+                "required": ["animation_path"],
+                "additionalProperties": False,
+            },
+            annotations={
+                "title": "Create Story Contract",
+                "readOnlyHint": False,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
+            handler=_create_story_contract_tool,
+        ),
+        ToolDefinition(
             name="check_animation",
             title="Check Animation",
-            description="Validate and audit a Kaivra JSON file or raw JSON string, with optional normalization write-back, narration timing guidance, and provider-aware voice sync guidance.",
+            description="Validate and audit a Kaivra JSON file or raw JSON string, including the required paired story-contract gate for file-backed layperson explainers, with optional normalization write-back, narration timing guidance, and provider-aware voice sync guidance.",
             input_schema={
                 "type": "object",
                 "properties": {
@@ -340,12 +422,12 @@ def _build_tools() -> list[ToolDefinition]:
                     "voice": {"type": "boolean"},
                     "voice_provider": {
                         "type": "string",
-                        "enum": ["openai", "elevenlabs", "local"],
+                        "enum": ["openai", "elevenlabs", "local", "qwen"],
                         "description": (
                             "Optional voice provider hint for sync auditing. "
                             "Use this to tailor the warning text. All providers benefit "
-                            "from keyword-overlap checks; ElevenLabs gets word-level cues, "
-                            "while OpenAI and local voice use scene-level timing."
+                            "from keyword-overlap checks; native cues and deterministic estimated "
+                            "word cues both support the same explicit cue phrases."
                         ),
                     },
                 },
@@ -363,7 +445,7 @@ def _build_tools() -> list[ToolDefinition]:
         ToolDefinition(
             name="preview_animation",
             title="Preview Animation",
-            description="Write a self-contained HTML preview and first-frame PNG into artifacts/previews.",
+            description="Verify the paired story contract for layperson explainers, then write a self-contained HTML preview and representative nonblank PNG into artifacts/previews.",
             input_schema={
                 "type": "object",
                 "properties": {
@@ -385,7 +467,7 @@ def _build_tools() -> list[ToolDefinition]:
         ToolDefinition(
             name="render_animation",
             title="Render Animation",
-            description="Render a Kaivra animation to PNG, MP4, or WebM inside artifacts/renders.",
+            description="Verify the paired story contract for layperson explainers, then render a Kaivra animation to PNG, MP4, or WebM inside artifacts/renders.",
             input_schema={
                 "type": "object",
                 "properties": {
@@ -400,11 +482,13 @@ def _build_tools() -> list[ToolDefinition]:
                     "voice": {"type": "boolean"},
                     "voice_provider": {
                         "type": "string",
-                        "enum": ["openai", "elevenlabs", "local"],
+                        "enum": ["openai", "elevenlabs", "local", "qwen"],
                         "description": (
                             "Voice synthesis provider. 'openai' is the default lower-cost cloud narration path "
-                            "with scene-level timing; 'elevenlabs' gives precise word-level alignment; "
-                            "'local' uses offline Sherpa TTS with scene-level timing and a short narration lead-in."
+                            "with deterministic estimated word timing when native cues are absent; "
+                            "'elevenlabs' can provide precise native word alignment; 'local' uses lightweight "
+                            "offline Sherpa TTS; 'qwen' uses the resident local Qwen3-TTS CoreML worker. "
+                            "Both local providers use the same cue contract and a short narration lead-in."
                         ),
                     },
                     "voice_id": {"type": "string"},
@@ -432,7 +516,18 @@ def _doctor_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, A
 def _plan_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
     return context.workspace.plan_animation(
         topic=arguments.get("topic"),
+        capability_requests=arguments.get("capability_requests"),
     )
+
+
+def _create_story_contract_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    context.emit_progress(0.2, "Writing the paired story contract.")
+    result = context.workspace.create_story_contract(
+        animation_path=arguments["animation_path"],
+        markdown=arguments.get("markdown"),
+    )
+    context.emit_progress(1.0, "Story contract is ready for review.")
+    return result
 
 
 def _add_theme_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
@@ -548,11 +643,11 @@ def _summarize_tool_result(name: str, result: dict[str, Any]) -> str:
         suggested_meta = result.get("suggested_meta") or {}
         draft_defaults = result.get("draft_defaults") or {}
         lines = [
-            "Animation plan ready. If the user already gave enough direction, assume the draft defaults and start writing the JSON immediately.",
+            "Animation plan ready. Translate the user's intent and examples into the paired story contract before writing JSON.",
             "",
             "Suggested meta:",
             f"- title: {suggested_meta.get('title', 'Untitled Animation')}",
-            f"- theme: {suggested_meta.get('theme', 'modern')}",
+            f"- theme: {suggested_meta.get('theme', 'editorial')}",
             f"- pacing: {suggested_meta.get('pacing', 'balanced')}",
             f"- audience: {suggested_meta.get('audience', 'mixed')}",
             f"- continuity: {suggested_meta.get('continuity', True)}",
@@ -562,17 +657,53 @@ def _summarize_tool_result(name: str, result: dict[str, Any]) -> str:
             f"- audience: {draft_defaults.get('audience', 'mixed')}",
             f"- detail_level: {draft_defaults.get('detail_level', 'balanced')}",
             f"- voice_mode: {draft_defaults.get('voice_mode', 'captions')}",
-            f"- pattern: {draft_defaults.get('pattern', 'process_explainer')}",
-            f"- theme: {draft_defaults.get('theme', 'modern')}",
+            f"- pattern: {draft_defaults.get('pattern', 'motion_explainer')}",
+            f"- theme: {draft_defaults.get('theme', 'editorial')}",
             f"- num_beats: {draft_defaults.get('num_beats', 'auto')}",
             "",
-            "Starter outline:",
+            "Choreography outline:",
         ]
-        for outline_item in result.get("draft_outline") or []:
+        for outline_item in result.get("choreography_outline") or []:
             if isinstance(outline_item, dict):
                 lines.append(
-                    f"- {outline_item.get('scene_id', 'scene')}: {outline_item.get('suggested_title', '')}"
+                    f"- {outline_item.get('movement_id', 'movement')}: {outline_item.get('suggested_title', '')}"
                 )
+        story_contract = result.get("story_contract") or {}
+        if story_contract:
+            lines.extend(
+                [
+                    "",
+                    "Story checkpoint:",
+                    f"- {story_contract.get('story_question', '')}",
+                    f"- {story_contract.get('human_checkpoint', '')}",
+                    f"- paired sidecar: {story_contract.get('sidecar_path', '<slug>.story.md')}",
+                ]
+            )
+        choreography_briefs = result.get("choreography_review_briefs") or []
+        if choreography_briefs:
+            lines.extend(["", "Choreography review segments:"])
+            for brief in choreography_briefs:
+                if isinstance(brief, dict):
+                    lines.append(
+                        f"- {brief.get('segment_id', 'segment')}: {brief.get('narrative_job', '')} — {brief.get('dominant_visual', '')}"
+                    )
+        capability_escalation = result.get("capability_escalation") or {}
+        capability_requests = capability_escalation.get("requests") or []
+        if capability_escalation:
+            lines.extend(
+                [
+                    "",
+                    "Capability escalation:",
+                    "- Creative approval is separate from implementation readiness; do not weaken the approved concept because a reusable primitive is missing.",
+                    "- The host orchestrator—not Kaivra—assigns one bounded implementation agent per missing reusable primitive, gives it the exact acceptance tests/context, then integrates and reviews the result.",
+                    "- Wait to author dependent JSON until every request is implemented or an explicitly accepted fallback and product risk are recorded.",
+                ]
+            )
+            for request in capability_requests:
+                if isinstance(request, dict):
+                    lines.append(
+                        f"- request {request.get('id', 'capability')}: {request.get('requested_primitive', '')} ({request.get('resolution_status', 'pending')})"
+                    )
         lines.extend(
             [
                 "",
@@ -583,26 +714,28 @@ def _summarize_tool_result(name: str, result: dict[str, Any]) -> str:
             default = question.get("default")
             default_suffix = f" (default: {default})" if default is not None else ""
             lines.append(f"- {question['id']}: {question.get('question', '')}{default_suffix}")
-        reference_examples = result.get("reference_examples") or []
-        if reference_examples:
-            lines.extend(["", "Embedded reference examples:"])
-            for example in reference_examples:
-                if isinstance(example, dict):
-                    lines.append(f"- {example.get('uri')}: {example.get('why', '')}")
         lines.extend(
             [
                 "",
                 "If voice is enabled, mirror on-screen keywords in narration and add spoken_forms for tricky names.",
                 "Default to clear spoken English and avoid file paths, repo-internal names, and implementation inventory unless the user explicitly wants technical detail.",
                 "If audience is layperson, strip file paths, repo-internal names, and jargon from narration completely.",
-                "Prefer process_explainer for narrated explainers: why it matters -> state flow -> outcome.",
-                "Prefer persistent document-level state when concepts carry across scenes.",
-                "Read kaivra://example/perspectiv_medcase_process_explainer for the best current process-explainer quality bar.",
+                "For layperson explainers, create and review the paired .story.md contract, then set meta.story_contract to its filename before previewing or rendering.",
+                "Prefer motion explainers: one evolving visual world, causal choreography, and state that transforms instead of resetting between beats.",
+                "Persist story actors and values, never presentation chrome or repeated navigation.",
+                "Read kaivra://story-contract before turning an intention or example into DSL.",
+                "Treat reference examples as syntax demonstrations, not visual or compositional quality bars.",
             ]
         )
         return "\n".join(lines)
     if name == "add_theme":
         return f"Theme saved at {result['file_path']}."
+    if name == "create_story_contract":
+        status = "ready" if result.get("status") == "ok" else "saved as a draft"
+        return (
+            f"Story contract {status} at {result['story_contract_path']}. "
+            f"Set meta.story_contract to {result['meta_value']!r} and review it before JSON authoring."
+        )
     if name == "check_animation":
         grouped = result.get("finding_groups") or {}
         blocking = grouped.get("blocking") or result.get("blocking_issues") or []

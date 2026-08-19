@@ -36,17 +36,20 @@ class VoiceProvider(ABC):
             AudioResult with path to generated audio and measured duration.
         """
 
+    def close(self) -> None:
+        """Release provider resources after a multi-scene render."""
+
 
 _ENTRY_POINT_GROUP = "kaivra.voice_providers"
 DEFAULT_VOICE_PROVIDER = "openai"
-_BUILTIN_VOICE_PROVIDERS = {"openai", "elevenlabs", "local"}
+_BUILTIN_VOICE_PROVIDERS = {"openai", "elevenlabs", "local", "qwen"}
 
 
 def _voice_install_hint() -> str:
     return (
         "Voice providers are not installed. "
         "From the repo root, run `make install-voice-local` for built-in OpenAI, ElevenLabs, "
-        "and local Sherpa support, or install the package directly with "
+        "local Sherpa, and local Qwen support, or install the package directly with "
         '`.venv/bin/python -m pip install -e "./packages/kaivra-voice[local]"`.'
     )
 
@@ -115,7 +118,8 @@ def validate_voice_provider_setup(name: str | None) -> str:
         if not os.environ.get("OPENAI_API_KEY", "").strip():
             raise RuntimeError(
                 "OPENAI_API_KEY environment variable is required for OpenAI voice renders. "
-                "Set it, or pass `--voice-provider elevenlabs` or `--voice-provider local`."
+                "Set it, or pass `--voice-provider elevenlabs`, `--voice-provider local`, "
+                "or `--voice-provider qwen`."
             )
         return provider_name
 
@@ -125,6 +129,17 @@ def validate_voice_provider_setup(name: str | None) -> str:
                 "ELEVENLABS_API_KEY environment variable is required for ElevenLabs voice renders. "
                 "Set it, or omit `--voice-provider` to use the default OpenAI provider."
             )
+        return provider_name
+
+    if provider_name == "qwen":
+        try:
+            from kaivra_voice.qwen import resolve_qwen_tts_paths
+        except ImportError as exc:
+            raise RuntimeError(_voice_install_hint()) from exc
+        try:
+            resolve_qwen_tts_paths(worker_path=None, models_path=None)
+        except RuntimeError as exc:
+            raise RuntimeError(str(exc)) from exc
         return provider_name
 
     try:

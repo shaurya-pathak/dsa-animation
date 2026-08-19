@@ -28,11 +28,14 @@ TEXT_EXTENSIONS = {
 IGNORED_DIRS = {
     ".git",
     ".mypy_cache",
+    ".npm-cache",
+    ".playwright-cli",
     ".pytest_cache",
     ".ruff_cache",
     ".venv",
     "__pycache__",
     "artifacts",
+    "dist",
     "node_modules",
 }
 

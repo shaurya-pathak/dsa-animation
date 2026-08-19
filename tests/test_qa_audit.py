@@ -147,6 +147,61 @@ def test_audit_ignores_connector_touching_only_its_endpoints() -> None:
     assert not any(finding.kind == "connector_overlap" for finding in findings)
 
 
+def test_audit_applies_hidden_group_envelope_to_children() -> None:
+    hidden_child = SceneNode(
+        id="hidden_child",
+        obj_type=ObjectType.BOX,
+        rect=Rect(120, 55, 140, 80),
+        default_visible=True,
+    )
+    hidden_stage = SceneNode(
+        id="hidden_stage",
+        obj_type=ObjectType.GROUP,
+        rect=Rect(100, 40, 180, 120),
+        children=[hidden_child],
+        default_visible=False,
+    )
+    visible_box = SceneNode(
+        id="visible_box",
+        obj_type=ObjectType.BOX,
+        rect=Rect(120, 55, 140, 80),
+        default_visible=True,
+    )
+    scene = ResolvedScene(
+        id="focus_stage",
+        duration=4.0,
+        nodes=[hidden_stage, visible_box],
+        node_map={
+            "hidden_stage": hidden_stage,
+            "hidden_child": hidden_child,
+            "visible_box": visible_box,
+        },
+        timeline=[],
+    )
+    graph = SceneGraph(
+        width=500,
+        height=300,
+        fps=30,
+        theme_name="editorial",
+        scenes=[scene],
+        show_narration=False,
+    )
+
+    findings = audit_scene_graph(graph, samples_per_scene=2)
+
+    assert not any(finding.kind == "overlap" for finding in findings)
+
+
+def test_long_scene_audit_samples_no_more_than_ten_seconds_apart() -> None:
+    from kaivra.qa.audit import _sample_times
+
+    samples = _sample_times(230.0, 5)
+
+    assert len(samples) == 23
+    assert samples[0] == 5.0
+    assert samples[-1] == 225.0
+
+
 def test_connector_endpoints_prefer_top_to_bottom_when_nodes_share_a_column() -> None:
     start, end = connector_endpoints(
         Rect(240, 120, 380, 120),

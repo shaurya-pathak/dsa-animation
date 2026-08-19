@@ -8,7 +8,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from kaivra.dsl.schema import AnimAction, ObjectType, RelativePositionSpec
+from kaivra.dsl.schema import (
+    AnimAction,
+    ContinuityMode,
+    ObjectType,
+    PetFeature,
+    PetKind,
+    RelativePositionSpec,
+    SizeVariant,
+)
 from kaivra.utils.geometry import Rect
 
 
@@ -22,9 +30,11 @@ class SceneNode:
     content: str | None = None
     style: str | None = None
     style_props: dict[str, Any] = field(default_factory=dict)
+    align_equals: bool = False
     children: list[SceneNode] = field(default_factory=list)
     position: str | None = None  # "above-layout", "top", etc.
     label: str | None = None
+    actor_id: str | None = None
 
     # Connector + Callout
     from_id: str | None = None
@@ -32,6 +42,34 @@ class SceneNode:
 
     # Token-specific
     token_id: int | None = None
+
+    # Pet portrait-specific
+    pet_kind: PetKind = PetKind.MYSTERY
+    pet_highlights: list[PetFeature] = field(default_factory=list)
+    show_feature_labels: bool = False
+
+    # Semantic-icon-specific. The schema confines this to a small stable
+    # vocabulary so renderer output stays predictable for LLM authors.
+    icon_name: str | None = None
+
+    # Linear meter-specific. These remain semantic values in the scene graph;
+    # both renderers derive a bounded track/pointer from them at draw time.
+    meter_value: float = 0.0
+    base_meter_value: float | None = None
+    meter_min: float = 0.0
+    meter_max: float = 100.0
+    meter_left_label: str | None = None
+    meter_center_label: str | None = None
+    meter_right_label: str | None = None
+    meter_value_label: str | None = None
+    meter_caption: str | None = None
+
+    # Sigmoid plot-specific. The output remains derived by renderers so the
+    # highlighted point cannot disagree with its declared input score.
+    sigmoid_input: float = 0.0
+    sigmoid_input_label: str | None = None
+    sigmoid_output_label: str | None = None
+    sigmoid_caption: str | None = "SIGMOID"
 
     # Persistence — persistent objects stay visible across all scenes
     persistent: bool = False
@@ -44,6 +82,7 @@ class SceneNode:
     translate_y: float = 0.0
     visible: bool = False  # starts hidden, animations reveal
     draw_progress: float = 1.0  # for draw/type animations (0-1)
+    flow_progress: float | None = None  # moving signal along a connector (0-1)
     highlight_intensity: float = 0.0
     highlight_color: str | None = None
     idle_preset: str | None = None
@@ -55,6 +94,8 @@ class SceneNode:
     base_scale_x: float = 1.0
     base_scale_y: float = 1.0
     layout_role: str | None = None
+    continuity_mode: ContinuityMode = ContinuityMode.STRICT
+    size_variant: SizeVariant = SizeVariant.DEFAULT
 
 
 @dataclass
@@ -105,7 +146,7 @@ class ResolvedScene:
     timeline: list[AnimationKeyframe]
     transition: TransitionInfo | None = None
     narration: str | None = None
-    show_progress_bar: bool = True
+    show_progress_bar: bool = False
 
 
 @dataclass

@@ -5,6 +5,61 @@ from kaivra.dsl.schema import parse_duration
 from kaivra.mcp.blueprints import build_starter_document
 
 
+def test_narrated_default_builds_one_motion_world_without_slideshow_chrome() -> None:
+    doc = build_starter_document(
+        title="How a clue changes a prediction",
+        pattern=None,
+        beats=[
+            {"title": "A clue arrives", "detail": "The model sees floppy ears."},
+            {"title": "Evidence changes", "detail": "The clue shifts the running evidence."},
+            {"title": "A prediction moves", "detail": "The estimate leans toward dog."},
+        ],
+        theme=None,
+        audience="layperson",
+        include_narration=True,
+    )
+
+    assert doc.objects == []
+    assert len(doc.scenes) == 1
+    scene = doc.scenes[0]
+    assert scene.id == "continuous_motion"
+    assert scene.template is None
+
+    serialized = scene.model_dump(mode="json", by_alias=True, exclude_none=True)
+    serialized_text = str(serialized).lower()
+    assert not any(
+        forbidden in serialized_text
+        for forbidden in ("heading", "footer", "stage_badge", "focus_card", "chapter")
+    )
+
+    animations = serialized["animations"]
+    assert not {animation["action"] for animation in animations} & {
+        "highlight",
+        "pulse",
+    }
+    draw_ids = {animation["id"] for animation in animations if animation["action"] == "draw"}
+    assert draw_ids
+    assert all(
+        animation.get("after") in draw_ids
+        for animation in animations
+        if animation["action"] == "flow"
+    )
+
+
+def test_legacy_visual_explainer_name_maps_to_motion_world() -> None:
+    doc = build_starter_document(
+        title="Legacy caller",
+        pattern="visual_explainer",
+        beats=["One state", "Another state"],
+        theme=None,
+        audience=None,
+        include_narration=True,
+    )
+
+    assert [scene.id for scene in doc.scenes] == ["continuous_motion"]
+    assert doc.scenes[0].template is None
+
+
 def test_narrated_starter_defaults_to_educational_pacing() -> None:
     doc = build_starter_document(
         title="Queues",
@@ -23,8 +78,7 @@ def test_narrated_starter_defaults_to_educational_pacing() -> None:
     assert doc.meta.pacing.value == "educational"
     assert doc.meta.continuity_duration == "1.3s"
     assert 8.0 <= parse_duration(doc.scenes[0].duration) <= 16.0
-    assert doc.scenes[0].focus_style is not None
-    assert doc.scenes[0].focus_style.duration == "1.4s"
+    assert doc.scenes[0].focus_style is None
 
 
 def test_silent_starter_defaults_to_balanced_pacing() -> None:
@@ -55,9 +109,8 @@ def test_explicit_quick_demo_pacing_overrides_narration_default() -> None:
 
     assert doc.meta.pacing.value == "quick-demo"
     assert doc.meta.continuity_duration == "0.6s"
-    assert doc.meta.glow_release_padding == "0.8s"
-    assert doc.scenes[0].focus_style is not None
-    assert doc.scenes[0].focus_style.duration == "1s"
+    assert "glow_release_padding" not in doc.meta.model_fields_set
+    assert doc.scenes[0].focus_style is None
 
 
 def test_resolve_meta_duration_uses_profile_defaults_only_when_field_missing() -> None:
@@ -97,7 +150,7 @@ def test_educational_pacing_formula_stays_longer_than_quick_demo_for_same_beat()
 
     educational_doc = build_starter_document(
         title="Forward Propagation",
-        pattern="visual_explainer",
+        pattern="motion_explainer",
         beats=[beat],
         theme="modern",
         audience=None,
@@ -106,7 +159,7 @@ def test_educational_pacing_formula_stays_longer_than_quick_demo_for_same_beat()
     )
     quick_doc = build_starter_document(
         title="Forward Propagation",
-        pattern="visual_explainer",
+        pattern="motion_explainer",
         beats=[beat],
         theme="modern",
         audience=None,
